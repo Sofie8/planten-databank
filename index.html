@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PlantenDatabank – mockup</title>
+  <link rel="stylesheet" href="assets/style.css" />
+  <!-- SheetJS (xlsx parser) via CDN -->
+  <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script defer src="assets/app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap">
+      <div class="brand">
+        <div class="logo">🌿</div>
+        <div>
+          <div class="title">PlantenDatabank (mockup)</div>
+          <div class="subtitle">Typologie → filters → lagen “painten” (Amber/Klimaat/Regionaal/BOBO/Fyto)</div>
+        </div>
+      </div>
+      <div class="right">
+        <a class="btn ghost" href="README.html" target="_blank" rel="noreferrer">Installatie</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="panel">
+      <div class="grid">
+        <div class="field">
+          <label>1) Typologie</label>
+          <select id="typology"></select>
+          <div class="hint">Eerst kies je de typologie (bv. Bomen, Haagplanten, Wadi…). Daarna pas bodemfilters.</div>
+        </div>
+
+        <div class="field">
+          <label>2) Subtype</label>
+          <select id="subtype"></select>
+          <div class="hint">Optioneel: verfijn binnen een typologie (bv. laanbomen, fruitbomen, bosgoed…).</div>
+        </div>
+
+        <div class="field">
+          <label>3) Bodemtype</label>
+          <select id="soilType"></select>
+        </div>
+
+        <div class="field">
+          <label>4) Bodemvochtigheid</label>
+          <select id="soilMoisture"></select>
+        </div>
+
+        <div class="field">
+          <label>5) Zuurtegraad (pH)</label>
+          <select id="acidity"></select>
+        </div>
+
+        <div class="field">
+          <label>6) Verspreiding</label>
+          <select id="spread"></select>
+          <div class="hint">Voorbeeld: inheems, ingeburgerd, aangeplant… (meervoudige waarden toegestaan)</div>
+        </div>
+      </div>
+
+      <div class="extra">
+        <div class="extra-title">Extra filters (optioneel)</div>
+        <div class="hint">Deze verschijnen automatisch als er kolommen bestaan die beginnen met <code>kenmerk_</code> (bv. <code>kenmerk_standplaats</code>, <code>kenmerk_bloemkleur</code>, …). Klik op een filter om opties te zien.</div>
+        <div id="extraFiltersList"></div>
+      </div>
+
+      <hr />
+
+      <div class="layers">
+        <div class="layer-title">7) Lagen “painten” (optioneel)</div>
+        <label class="chip"><input type="checkbox" id="layer_klimaat" /> Klimaatbomenlijst</label>
+        <label class="chip"><input type="checkbox" id="layer_amber" /> AMBER-lijst</label>
+        <label class="chip"><input type="checkbox" id="layer_regionaal" /> Regionale soortenlijst</label>
+        <label class="chip"><input type="checkbox" id="layer_bobo" /> BOBO-regio</label>
+        <label class="chip"><input type="checkbox" id="layer_fyto" /> Fytoremediatie</label>
+      </div>
+
+      <div class="grid2">
+        <div class="field" id="districtWrap" style="display:none;">
+          <label>Regionale lijst: district</label>
+          <select id="district"></select>
+          <div class="hint">Kies “Alleen tonen” om enkel planten te tonen die in de regionale lijst voorkomen.</div>
+          <div class="inline">
+            <label class="radio"><input type="radio" name="regionMode" id="regionModePaint" value="paint" checked> Labelen</label>
+            <label class="radio"><input type="radio" name="regionMode" id="regionModeFilter" value="filter"> Alleen tonen</label>
+          </div>
+        </div>
+        <div class="field" id="boboWrap" style="display:none;">
+  <label>BOBO: groep</label>
+  <select id="boboGroup"></select>
+  <div class="hint">Eerst kies je de lettergroep (A/E/G/L/M/P/S/U/V/Z).</div>
+</div>
+<div class="field" id="boboCodeWrap" style="display:none;">
+  <label>BOBO: bodemcode</label>
+  <select id="boboCode"></select>
+  <div class="hint">Daarna kies je de specifieke code (bv. Aba). Kies “Alle” om enkel op aanwezigheid te filteren.</div>
+</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="results-head">
+        <div>
+          <div class="results-title">Resultaten</div>
+          <div class="results-sub" id="resultsMeta">—</div>
+        </div>
+        <div class="right">
+          <button class="btn" id="exportCsv">Export CSV</button>
+        </div>
+      </div>
+
+      <div class="tableWrap">
+        <table id="results">
+          <thead>
+            <tr>
+              <th>Latijnse naam</th>
+              <th>Nederlandse naam</th>
+              <th>Bodemtype</th>
+              <th>Vocht</th>
+              <th>pH</th>
+              <th>Lagen</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="footnote">
+        Tip: voeg later kolommen toe zoals “hoogte”, “licht”, “luchtverontreiniging”, “bestuiving”, … (zelfde patroon).
+      </div>
+    </section>
+
+    <section class="panel small">
+      <details>
+        <summary>Wat moet ik uploaden om dit te laten werken op GitHub Pages?</summary>
+        <div class="pad">
+          <p>Minstens:</p>
+          <ul>
+            <li><code>data/typologies/&lt;bestand&gt;.xlsx</code> met kolommen <b>Latijnse naam</b>, <b>Nederlandse naam</b> en (optioneel) <b>kenmerk_bodemtype</b>, <b>kenmerk_bodemvochtigheid</b>, <b>kenmerk_zuurtegraad</b>.</li>
+            <li>Optioneel: extra lagen in <code>data/layers/</code>.</li>
+            <li>Configuratie via <code>data/config.json</code> (makkelijk) of <code>data/layers/backbone_lists.xlsx</code> (jouw backbone).</li>
+          </ul>
+        </div>
+      </details>
+    </section>
+  </main>
+
+  <footer class="wrap footer">
+    Mockup (client-side). Geen server nodig. Werkt op GitHub Pages.
+  </footer>
+</body>
+</html>

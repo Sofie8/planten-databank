@@ -1,0 +1,156 @@
+{
+  "typologies": {
+    "1.Bomen": {
+      "label": "Bomen",
+      "subtypes": {
+        "Alle bomen (Ecoflora)": [
+          "ecoflora_bomen"
+        ],
+        "Bosgoed": [
+          "ecoflora_bosgoed"
+        ],
+        "Fruitbomen": [
+          "ecoflora_fruitbomen"
+        ],
+        "Laanbomen": [
+          "ecoflora_laanbomen"
+        ],
+        "Solitaire bomen": [
+          "ecoflora_solitaire_bomen"
+        ]
+      }
+    },
+    "2.Haagplanten": {
+      "label": "Haagplanten",
+      "subtypes": {
+        "Haagplanten": [
+          "ecoflora_haagplanten"
+        ],
+        "Haagpakketten": [
+          "ecoflora_haagpakketten"
+        ]
+      }
+    },
+    "3.wadi": {
+      "label": "Wadi / vijver",
+      "subtypes": {
+        "Waterplanten (Ecoflora)": [
+          "Ecoflora_waterplanten"
+        ]
+      }
+    },
+    "4.bloemenweide": {
+      "label": "Bloemen & zaden",
+      "subtypes": {
+        "Bloembollen": [
+          "ecoflora_bloembollen"
+        ],
+        "Bloemenweide": [
+          "ecoflora_bloemenweides"
+        ],
+        "Rozen": [
+          "ecoflora_rozen"
+        ],
+        "Zaden bloemen": [
+          "ecoflora_zaden_bloemen"
+        ]
+      }
+    },
+    "5.inheemse_planten": {
+      "label": "Inheemse planten",
+      "subtypes": {
+        "Borders": [
+          "ecoflora_borders"
+        ],
+        "Grassen": [
+          "ecoflora_grassen"
+        ],
+        "Varens": [
+          "Ecoflora_varens"
+        ],
+        "Wilde planten": [
+          "ecoflora_wilde_planten"
+        ]
+      }
+    },
+    "6.gevelgroen": {
+      "label": "Gevelgroen",
+      "subtypes": {
+        "Klimplanten (Ecoflora)": [
+          "ecoflora_klimplanten"
+        ]
+      }
+    },
+    "7.grasland_weide": {
+      "label": "Grasland / weide",
+      "subtypes": {
+        "Begrazingsmengsels": [
+          "ecoflora_begrazingsmengsels"
+        ],
+        "Groenbedekker (groenbemesters)": [
+          "ecoflora_groenbemesters"
+        ]
+      }
+    },
+    "9.fruit_groenten_kruiden": {
+      "label": "Fruit, groenten, kruiden",
+      "subtypes": {
+        "Kleinfruit": [
+          "ecoflora_kleinfruit"
+        ],
+        "Kruiden": [
+          "ecoflora_kruiden"
+        ],
+        "Zadenpakketten": [
+          "ecoflora_zadenpakketten"
+        ]
+      }
+    }
+  },
+  "layers": {
+    "klimaatbomenlijst": [
+      "Klimaatbomen_amber"
+    ],
+    "amberlijst": [
+      "Amber_bomen",
+      "Amber_heesters",
+      "Amber_klimplanten",
+      "Amber_lage_bodembedekkers_3060",
+      "Amber_zeerlage_bodembedekkers_530",
+      "Amber_streekeigen_inheemse_vasteplanten",
+      "Amber_Oost-Kempisch_puinwaaierdistrict"
+    ],
+    "regionale_soortenlijst": [
+      "Regionale_soortenlijst_Oost-Kempisch puinwaaierdistrict"
+    ],
+    "bobo_regio": [
+      "BOBO"
+    ],
+    "fytoremediatie": {
+      "1.Bomen": [
+        "Fytoremediatie_bomen"
+      ],
+      "2.Haagplanten": [
+        "Fytoremediatie_haagplanten"
+      ],
+      "3.wadi": [
+        "Fytoremediatie_wadi"
+      ],
+      "4.bloemenweide": [
+        "Fytoremediatie_bloemenweide"
+      ],
+      "5.inheemse_planten": [
+        "Fytoremediatie_inheemse_planten"
+      ],
+      "6.gevelgroen": [
+        "Fytoremediatie_gevelgroen"
+      ],
+      "7.grasland_weide": [
+        "Fytoremediatie_weide"
+      ],
+      "9.fruit_groenten_kruiden": [
+        "Fytoremediatie_fruit_groenten_kruiden"
+      ]
+    }
+  }
+}

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="nl"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Installatie – PlantenDatabank</title><link rel="stylesheet" href="assets/style.css"/></head>
+<body><main class="wrap">
+<h1>Installatie (GitHub Pages)</h1>
+<ol>
+  <li>Maak een GitHub repo (bv. <code>planten-databank</code>).</li>
+  <li>Kopieer alle bestanden uit deze map naar je repo.</li>
+  <li>Enable GitHub Pages: Settings → Pages → “Deploy from branch” → <code>main</code> → root.</li>
+</ol>
+
+<h2>BOBO (2-level selectie)</h2>
+<p>De BOBO-keuzes komen uit <code>data/layers/bobo_bodemcodes_volledige_lijst.xlsx</code> (sheet <code>alle_codes</code> met kolommen <code>groep</code> en <code>code</code>).</p>
+<p>Voor de echte BOBO “paint” upload je per lettergroep een bestand zoals:</p>
+<ul>
+  <li><code>data/layers/BOBO_A.xlsx</code></li>
+  <li><code>data/layers/BOBO_E.xlsx</code> …</li>
+</ul>
+<p>De app matcht op <b>Latijnse naam</b> en (optioneel) leest ze een codekolom (bv. <code>code</code> of <code>bodemcode</code>) om te filteren op de gekozen bodemcode.</p>
+
+<h2>Regionale soortenlijst</h2>
+<p>De district-dropdown komt uit <code>data/layers/List_options_regionale_soortenlijst.xlsx</code> (kolom <code>Districten</code>).</p>
+<p>Per district verwacht de app een Excel-bestand in <code>data/layers/</code> met de naam:</p>
+<pre><code>&lt;Districtnaam met spaties → underscores&gt;.xlsx</code></pre>
+<p>Voorbeeld: <code>Oost-Kempisch puinwaaierdistrict</code> → <code>Oost-Kempisch_puinwaaierdistrict.xlsx</code>.</p>
+
+
+<h2>Bestandsstructuur</h2>
+<pre><code>.
+├─ index.html
+├─ assets/
+│  ├─ app.js
+│  └─ style.css
+└─ data/
+   ├─ config.json
+   ├─ typologies/
+   │  ├─ ecoflora_bomen.xlsx
+   │  └─ ecoflora_haagplanten.xlsx
+   └─ layers/
+      ├─ Amber_bomen.xlsx
+      ├─ Klimaatbomen_amber.xlsx
+      ├─ Regionale_soortenlijst_Oost-Kempisch puinwaaierdistrict.xlsx
+      └─ Fytoremediatie_bomen.xlsx
+</code></pre>
+
+<h2>Hoe werkt de mapping?</h2>
+<p>De app probeert eerst <code>data/layers/backbone_lists.xlsx</code> te laden (jouw backbone). Als dat niet lukt, gebruikt ze <code>data/config.json</code>.</p>
+
+<h2>Kolommen (minimaal)</h2>
+<ul>
+  <li><b>Latijnse naam</b> (key)</li>
+  <li><b>Nederlandse naam</b></li>
+  <li>Optioneel filters: <code>kenmerk_bodemtype</code>, <code>kenmerk_bodemvochtigheid</code>, <code>kenmerk_zuurtegraad</code></li>
+</ul>
+
+<h2>Tip voor latere uitbreiding</h2>
+<p>Je kan extra filters toevoegen door extra kolommen te lezen (bv. licht, hoogte, wind, luchtverontreiniging, voedselrijkdom). Het patroon blijft hetzelfde.</p>
+
+<p><a class="btn" href="index.html">← terug naar app</a></p>
+</main></body></html>
+
+<h2>Regionaal: labelen vs alleen tonen</h2>
+<p>Zet je de regionale laag aan, dan kan je kiezen tussen <b>Labelen</b> (paintlaag) of <b>Alleen tonen</b> (hard filter: enkel planten die in de regionale lijst zitten).</p>
