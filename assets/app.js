@@ -5,10 +5,9 @@
    - Fyto: 3 extra kolommen in tabel wanneer Fyto-laag actief
    - Layer matching: Latijnse naam (primair) + Nederlandse naam (fallback)
 */
-
 "use strict";
 
-const $ = (sel) => document.querySelector(sel);
+const \$ = (sel) => document.querySelector(sel);
 
 // ─── CONSTANTEN ───────────────────────────────────────────────────────────────
 const IMAGE_BASE_URL = "https://pub-bb204453b9b642598d8514f7ac4f68be.r2.dev";
@@ -19,22 +18,28 @@ const STATE = {
   plants: [],
   loaded: { typologies: new Map(), layers: new Map() },
   options: {
-    bobo: { groups: [], codesByGroup: new Map() },
+    bobo:   { groups: [], codesByGroup: new Map() },
     region: { districts: [] }
   },
   selected: {
-    typology: null,
-    subtype: null,
-    soilType: "ALLE",
+    typology:     null,
+    subtype:      null,
+    soilType:     "ALLE",
     soilMoisture: "ALLE",
-    acidity: "ALLE",
-    spread: "ALLE",
-    layers: { klimaat: false, amber: false, regionaal: false, bobo: false, fyto: false },
-    district: "",
-    regionMode: "paint",
-    boboGroup: "",
-    boboCode: "ALLE",
-    facets: new Map()
+    acidity:      "ALLE",
+    spread:       "ALLE",
+    layers: {
+      klimaat:   false,
+      amber:     false,
+      regionaal: false,
+      bobo:      false,
+      fyto:      false
+    },
+    district:    "",
+    regionMode:  "paint",
+    boboGroup:   "",
+    boboCode:    "ALLE",
+    facets:      new Map()
   },
   table: { extraCols: [] }
 };
@@ -43,8 +48,8 @@ const STATE = {
 function norm(s) {
   return String(s ?? "").replace(/\u00a0/g, " ").trim().replace(/\s+/g, " ");
 }
-function keyLatin(s) { return norm(s).toLowerCase(); }
-function keyDutch(s) { return "nl:" + norm(s).toLowerCase(); }
+function keyLatin(s)  { return norm(s).toLowerCase(); }
+function keyDutch(s)  { return "nl:" + norm(s).toLowerCase(); }
 
 function splitList(s) {
   const t = norm(s);
@@ -67,7 +72,7 @@ async function fetchXlsx(path) {
   const buf = await res.arrayBuffer();
   return XLSX.read(buf, { type: "array" });
 }
-function firstSheetName(wb) { return wb.SheetNames[0]; }
+function firstSheetName(wb)        { return wb.SheetNames[0]; }
 function sheetToJson(wb, sheetName) {
   return XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: "" });
 }
@@ -81,7 +86,6 @@ async function loadConfig() {
 
 // ─── TYPOLOGIE OPTIES ─────────────────────────────────────────────────────────
 function typologyOptions() {
-  // Lees uit config als beschikbaar, anders fallback
   if (STATE.config?.typologies) {
     return Object.keys(STATE.config.typologies);
   }
@@ -96,20 +100,18 @@ function typologyOptions() {
     "9.fruit_groenten_kruiden"
   ];
 }
-
 function subtypeOptions(typology) {
   const node = STATE.config?.typologies?.[typology];
-  const subs = node?.subtypes ? Object.keys(node.subtypes) : ["Alle"];
+  const subs  = node?.subtypes ? Object.keys(node.subtypes) : ["Alle"];
   return subs.length ? subs : ["Alle"];
 }
-
 function filesForTypology(typology, subtype) {
   const node = STATE.config?.typologies?.[typology];
   if (!node) return [];
   const subtypeKeys = Object.keys(node.subtypes || {});
   const sub = node.subtypes?.[subtype]
-    ?? node.subtypes?.[subtypeKeys[0]]
-    ?? [];
+           ?? node.subtypes?.[subtypeKeys[0]]
+           ?? [];
   return (sub ?? []).map(norm).filter(Boolean).map(n => `data/typologies/\${n}.xlsx`);
 }
 
@@ -117,11 +119,10 @@ function filesForTypology(typology, subtype) {
 function districtToFilename(d) {
   const cleaned = norm(d)
     .replaceAll("/", "_")
-    .replaceAll("  ", " ")
+    .replaceAll(" ", " ")
     .replaceAll(".", "");
   return cleaned.split(" ").join("_") + ".xlsx";
 }
-
 function layerFiles(layerKey, typology) {
   if (layerKey === "regionaal") {
     if (!STATE.selected.district) return [];
@@ -137,7 +138,7 @@ function layerFiles(layerKey, typology) {
     return names.map(n => `data/layers/\${n}.xlsx`);
   }
   const keyMap = { klimaat: "klimaatbomenlijst", amber: "amberlijst" };
-  const names = (STATE.config?.layers?.[keyMap[layerKey]] ?? [])
+  const names  = (STATE.config?.layers?.[keyMap[layerKey]] ?? [])
     .map(norm).filter(Boolean);
   return names.map(n => `data/layers/\${n}.xlsx`);
 }
@@ -145,21 +146,21 @@ function layerFiles(layerKey, typology) {
 // ─── ROW PARSERS ──────────────────────────────────────────────────────────────
 function rowLatin(row) {
   return norm(
-    row["Latijnse naam"] ||
+    row["Latijnse naam"]  ||
     row["Latijnse naam "] ||
-    row["latijnse naam"] ||
-    row["LatijnseNaam"] ||
-    row["latin"] ||
+    row["latijnse naam"]  ||
+    row["LatijnseNaam"]   ||
+    row["latin"]          ||
     ""
   );
 }
 function rowDutch(row) {
   return norm(
-    row["Nederlandse naam"] ||
+    row["Nederlandse naam"]  ||
     row["Nederlandse naam "] ||
-    row["nederlandse naam"] ||
-    row["NederlandseNaam"] ||
-    row["dutch"] ||
+    row["nederlandse naam"]  ||
+    row["NederlandseNaam"]   ||
+    row["dutch"]             ||
     ""
   );
 }
@@ -174,14 +175,12 @@ const BASE_FILTER_KEYS = new Set([
 function plantFromRow(row) {
   const latin = rowLatin(row);
   const dutch = rowDutch(row);
-
   const traits = {
     bodemtype:    splitList(row["kenmerk_bodemtype"]),
     bodemvocht:   splitList(row["kenmerk_bodemvochtigheid"]),
     zuur:         splitList(row["kenmerk_zuurtegraad"]),
     verspreiding: splitList(row["kenmerk_verspreiding"]),
   };
-
   const dynamic = new Map();
   for (const [k, v] of Object.entries(row)) {
     const kk = norm(k);
@@ -191,18 +190,16 @@ function plantFromRow(row) {
     const vals = splitList(v);
     if (vals.length) dynamic.set(kLower, vals);
   }
-
   const fotoIds = splitPipesRaw(
     row["foto_ids"] || row["foto_id"] || row["foto"] || ""
   );
-
   return {
     latin, dutch,
     traits, dynamic,
     fotoIds,
     layers: { klimaat: false, amber: false, regionaal: false, bobo: false, fyto: false },
     boboCode: null,
-    fytoRow: null,
+    fytoRow:  null,
     raw: row
   };
 }
@@ -211,7 +208,6 @@ function plantFromRow(row) {
 async function loadTypologyPlants(typology, subtype) {
   const files = filesForTypology(typology, subtype);
   if (!files.length) return [];
-
   const all = [];
   for (const file of files) {
     if (STATE.loaded.typologies.has(file)) {
@@ -219,8 +215,8 @@ async function loadTypologyPlants(typology, subtype) {
       continue;
     }
     try {
-      const wb = await fetchXlsx(file);
-      const rows = sheetToJson(wb, firstSheetName(wb));
+      const wb     = await fetchXlsx(file);
+      const rows   = sheetToJson(wb, firstSheetName(wb));
       const plants = rows.map(plantFromRow).filter(p => p.latin);
       STATE.loaded.typologies.set(file, plants);
       all.push(...plants);
@@ -228,7 +224,6 @@ async function loadTypologyPlants(typology, subtype) {
       console.warn(`Kon bestand niet laden: \${file}`, e);
     }
   }
-
   // Dedupliceer op Latijnse naam
   const merged = new Map();
   for (const p of all) {
@@ -260,14 +255,14 @@ async function loadLayerIndex(files) {
       continue;
     }
     try {
-      const wb = await fetchXlsx(file);
+      const wb   = await fetchXlsx(file);
       const rows = sheetToJson(wb, firstSheetName(wb));
-      const map = new Map();
+      const map  = new Map();
       for (const r of rows) {
         const latin = rowLatin(r);
         const dutch = rowDutch(r);
         if (latin) map.set(keyLatin(latin), r);
-        if (dutch)  map.set(keyDutch(dutch), r);
+        if (dutch) map.set(keyDutch(dutch), r);
       }
       STATE.loaded.layers.set(file, map);
       for (const [k, v] of map.entries()) out.set(k, v);
@@ -285,7 +280,7 @@ function fillSelect(selectEl, values, includeAll = true) {
   selectEl.innerHTML = "";
   const add = (v, label) => {
     const opt = document.createElement("option");
-    opt.value = v;
+    opt.value       = v;
     opt.textContent = label ?? v;
     selectEl.appendChild(opt);
   };
@@ -313,7 +308,6 @@ function computeBaseFilterOptions(plants) {
     spread: uniqSorted(spread)
   };
 }
-
 function computeFacetOptions(plants) {
   const counts = new Map();
   for (const p of plants) {
@@ -333,13 +327,12 @@ function matchesBaseFilters(p) {
   const ac = STATE.selected.acidity.toLowerCase();
   const sp = STATE.selected.spread.toLowerCase();
   return (
-    (st === "alle" || p.traits.bodemtype.includes(st)) &&
+    (st === "alle" || p.traits.bodemtype.includes(st))  &&
     (sm === "alle" || p.traits.bodemvocht.includes(sm)) &&
-    (ac === "alle" || p.traits.zuur.includes(ac)) &&
+    (ac === "alle" || p.traits.zuur.includes(ac))       &&
     (sp === "alle" || p.traits.verspreiding.includes(sp))
   );
 }
-
 function matchesFacets(p) {
   for (const [k, set] of STATE.selected.facets.entries()) {
     if (!set || set.size === 0) continue;
@@ -348,13 +341,11 @@ function matchesFacets(p) {
   }
   return true;
 }
-
 function matchesRegionMode(p) {
   if (!STATE.selected.layers.regionaal) return true;
   if (STATE.selected.regionMode !== "filter") return true;
   return p.layers.regionaal === true;
 }
-
 function matchesAll(p) {
   return matchesBaseFilters(p) && matchesFacets(p) && matchesRegionMode(p);
 }
@@ -369,16 +360,15 @@ function badgesForPlant(p) {
   if (p.layers.fyto)      b.push("Fyto");
   return b;
 }
-
 function pickAny(row, keys) {
   for (const k of keys) {
-    if (row && row[k] !== undefined && row[k] !== null && String(row[k]).trim() !== "") {
+    if (row && row[k] !== undefined && row[k] !== null &&
+        String(row[k]).trim() !== "") {
       return norm(row[k]);
     }
   }
   return "";
 }
-
 function matchLayerRow(layerIndex, plant) {
   const k1 = keyLatin(plant.latin);
   if (layerIndex.has(k1)) return layerIndex.get(k1);
@@ -409,13 +399,11 @@ function buildFytoColumns() {
     }
   ];
 }
-
 function clearExtraColumns() { STATE.table.extraCols = []; }
 
 async function applyLayers() {
-  // Reset alle laag-info
   for (const p of STATE.plants) {
-    p.layers = { klimaat: false, amber: false, regionaal: false, bobo: false, fyto: false };
+    p.layers  = { klimaat: false, amber: false, regionaal: false, bobo: false, fyto: false };
     p.fytoRow = null;
     p.boboCode = null;
   }
@@ -441,7 +429,7 @@ async function applyLayers() {
     }
   }
   if (STATE.selected.layers.bobo) {
-    const idx = await loadLayerIndex(layerFiles("bobo", typ));
+    const idx    = await loadLayerIndex(layerFiles("bobo", typ));
     const wanted = STATE.selected.boboCode;
     for (const p of STATE.plants) {
       const row = matchLayerRow(idx, p);
@@ -453,11 +441,11 @@ async function applyLayers() {
       if (wanted && wanted !== "ALLE") {
         if (code && norm(code).toLowerCase() === norm(wanted).toLowerCase()) {
           p.layers.bobo = true;
-          p.boboCode = code || wanted;
+          p.boboCode    = code || wanted;
         }
       } else {
         p.layers.bobo = true;
-        p.boboCode = code || null;
+        p.boboCode    = code || null;
       }
     }
   }
@@ -467,7 +455,7 @@ async function applyLayers() {
       const row = matchLayerRow(idx, p);
       if (!row) continue;
       p.layers.fyto = true;
-      p.fytoRow = row;
+      p.fytoRow     = row;
     }
     buildFytoColumns();
   }
@@ -491,7 +479,7 @@ function rebuildTableHeader() {
 
 function render(plants) {
   rebuildTableHeader();
-  const tbody = \$("#results tbody");
+  const tbody   = \$("#results tbody");
   tbody.innerHTML = "";
   const filtered = plants.filter(matchesAll);
   \$("#resultsMeta").textContent = `\${filtered.length} resultaten`;
@@ -507,7 +495,7 @@ function render(plants) {
     // Nederlandse naam (klikbaar → drawer)
     const tdDutch = document.createElement("td");
     tdDutch.textContent = p.dutch || "—";
-    tdDutch.className = "dutchCell";
+    tdDutch.className   = "dutchCell";
     tdDutch.addEventListener("click", (e) => {
       e.stopPropagation();
       openDrawer(p);
@@ -515,31 +503,31 @@ function render(plants) {
     tr.appendChild(tdDutch);
 
     // Bodem / Vocht / pH
-    const tdSoil  = document.createElement("td");
-    tdSoil.textContent  = (p.traits.bodemtype  || []).join(", ") || "—";
+    const tdSoil = document.createElement("td");
+    tdSoil.textContent = (p.traits.bodemtype  || []).join(", ") || "—";
     tr.appendChild(tdSoil);
 
     const tdMoist = document.createElement("td");
     tdMoist.textContent = (p.traits.bodemvocht || []).join(", ") || "—";
     tr.appendChild(tdMoist);
 
-    const tdPh    = document.createElement("td");
-    tdPh.textContent    = (p.traits.zuur       || []).join(", ") || "—";
+    const tdPh = document.createElement("td");
+    tdPh.textContent = (p.traits.zuur || []).join(", ") || "—";
     tr.appendChild(tdPh);
 
     // Lagen badges
     const tdBadges = document.createElement("td");
-    const wrap = document.createElement("div");
+    const wrap     = document.createElement("div");
     wrap.className = "badges";
     for (const t of badgesForPlant(p)) {
       const s = document.createElement("span");
-      s.className = "badge ok";
+      s.className   = "badge ok";
       s.textContent = t;
       wrap.appendChild(s);
     }
     if (p.layers.bobo && p.boboCode) {
       const s = document.createElement("span");
-      s.className = "badge";
+      s.className   = "badge";
       s.textContent = p.boboCode;
       wrap.appendChild(s);
     }
@@ -549,7 +537,7 @@ function render(plants) {
     // Extra kolommen (bv. fyto)
     for (const c of STATE.table.extraCols) {
       const td = document.createElement("td");
-      const v = c.getter(p);
+      const v  = c.getter(p);
       td.textContent = v ? String(v) : "—";
       tr.appendChild(td);
     }
@@ -563,7 +551,6 @@ function render(plants) {
 function urlForFotoId(id, ext) {
   return `\${IMAGE_BASE_URL}/\${id}.\${ext}`;
 }
-
 function loadImage(url) {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -572,7 +559,6 @@ function loadImage(url) {
     img.src = url;
   });
 }
-
 async function resolveFotoUrls(fotoIds, max = 80) {
   const out = [];
   for (const id of fotoIds) {
@@ -614,7 +600,7 @@ function openDrawer(plant) {
       ["Comments on phytoremedial effectiveness"]) || "—";
     \$("#fytoSite").textContent = pickAny(plant.fytoRow,
       ["Continent-Country-City-Site"]) || "—";
-    \$("#fytoRef").textContent = pickAny(plant.fytoRow,
+    \$("#fytoRef").textContent  = pickAny(plant.fytoRow,
       ["Reference (author, year, doi)", "Reference (author, year)", "Reference"]) || "—";
   } else {
     fytoBox.style.display = "none";
@@ -622,8 +608,6 @@ function openDrawer(plant) {
 
   // Foto carousel
   const imgHost = \$("#drawerImages");
-
-  // ✅ FIX: verwijder oude event listeners door innerHTML te resetten VOOR async werk
   imgHost.innerHTML = `<div class="hint">Foto's laden…</div>`;
 
   const ids = plant.fotoIds || [];
@@ -631,28 +615,23 @@ function openDrawer(plant) {
     imgHost.innerHTML = `<div class="hint">Geen foto_ids voor deze plant.</div>`;
   } else {
     resolveFotoUrls(ids, 80).then(urls => {
-      // ✅ FIX: check of drawer nog open is voor dezelfde plant
       if (\$("#drawerTitle").textContent !== plant.latin) return;
-
       if (!urls.length) {
         imgHost.innerHTML = `<div class="hint">Geen foto's gevonden voor deze plant.</div>`;
         return;
       }
-
-      // ✅ FIX: carousel state buiten renderCarousel zodat geen closure leak
       let idx = 0;
-
       function renderCarousel() {
-        // Vervang innerHTML (verwijdert automatisch oude listeners)
         imgHost.innerHTML = `
           <div class="carousel">
-            <img class="carouselMain" src="\${urls[idx]}" alt="foto \${idx + 1} van \${urls.length}">
-            <button class="carouselBtn prev" aria-label="vorige foto">‹</button>
-            <button class="carouselBtn next" aria-label="volgende foto">›</button>
+            <img class="carouselMain"
+                 src="\${urls[idx]}"
+                 alt="foto \${idx + 1} van \${urls.length}">
+            <button class="carouselBtn prev" aria-label="vorige foto">&#8249;</button>
+            <button class="carouselBtn next" aria-label="volgende foto">&#8250;</button>
             <div class="carouselCounter">\${idx + 1} / \${urls.length}</div>
           </div>
         `;
-        // Listeners direct op nieuwe elementen (geen ID nodig → geen conflict)
         imgHost.querySelector(".carouselBtn.prev").addEventListener("click", (e) => {
           e.stopPropagation();
           idx = (idx - 1 + urls.length) % urls.length;
@@ -664,7 +643,6 @@ function openDrawer(plant) {
           renderCarousel();
         });
       }
-
       renderCarousel();
     });
   }
@@ -678,7 +656,6 @@ function closeDrawer() {
   if (!drawer) return;
   drawer.classList.remove("open");
   drawer.setAttribute("aria-hidden", "true");
-  // ✅ FIX: reset images bij sluiten om memory vrij te geven
   const imgHost = \$("#drawerImages");
   if (imgHost) imgHost.innerHTML = "";
 }
@@ -695,7 +672,7 @@ function toCsv(rows) {
     headers.map(esc).join(","),
     ...rows.map(p => {
       const layers = badgesForPlant(p).join("|");
-      const base = [
+      const base   = [
         p.latin,
         p.dutch,
         (p.traits.bodemtype    || []).join("|"),
@@ -712,9 +689,9 @@ function toCsv(rows) {
 
 function downloadText(filename, text) {
   const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href     = url;
   a.download = filename;
   document.body.appendChild(a);
   a.click();
@@ -727,7 +704,6 @@ function toggleFacetPanel(id) {
   const body = document.querySelector(`#facetBody_\${id}`);
   if (body) body.classList.toggle("open");
 }
-
 function humanizeFacetKey(k) {
   return norm(k).replace(/^kenmerk_/i, "").replaceAll("_", " ");
 }
@@ -737,18 +713,17 @@ function renderExtraFilters(plants) {
   if (!host) return;
   host.innerHTML = "";
   const counts = computeFacetOptions(plants);
-  const keys = uniqSorted(Array.from(counts.keys()));
+  const keys   = uniqSorted(Array.from(counts.keys()));
   if (!keys.length) {
     host.innerHTML = `<div class="hint">Geen extra kenmerken beschikbaar.</div>`;
     return;
   }
-
   keys.forEach((k, idx) => {
-    const map = counts.get(k);
+    const map     = counts.get(k);
     const entries = Array.from(map.entries())
       .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 
-    const facet = document.createElement("div");
+    const facet  = document.createElement("div");
     facet.className = "facet";
 
     const header = document.createElement("div");
@@ -758,21 +733,21 @@ function renderExtraFilters(plants) {
         <div class="facetTitle">\${humanizeFacetKey(k)}</div>
         <div class="facetMeta">\${entries.length} opties</div>
       </div>
-      <div>▾</div>
+      <div>&#9662;</div>
     `;
     header.addEventListener("click", () => toggleFacetPanel(idx));
 
     const body = document.createElement("div");
     body.className = "facetBody";
-    body.id = `facetBody_\${idx}`;
+    body.id        = `facetBody_\${idx}`;
 
     const opts = document.createElement("div");
     opts.className = "facetOptions";
-    const selectedSet = STATE.selected.facets.get(k) || new Set();
 
+    const selectedSet = STATE.selected.facets.get(k) || new Set();
     for (const [val, count] of entries) {
       const safeId = `facet_\${idx}_\${val.replace(/[^a-z0-9]+/g, "_")}`;
-      const wrap = document.createElement("label");
+      const wrap   = document.createElement("label");
       wrap.className = "opt";
       wrap.innerHTML = `
         <input type="checkbox" id="\${safeId}">
@@ -789,7 +764,6 @@ function renderExtraFilters(plants) {
       });
       opts.appendChild(wrap);
     }
-
     body.appendChild(opts);
     facet.appendChild(header);
     facet.appendChild(body);
@@ -800,9 +774,9 @@ function renderExtraFilters(plants) {
 // ─── OPTIES LADEN (BOBO + REGIO) ──────────────────────────────────────────────
 async function loadBoboOptions() {
   try {
-    const wb = await fetchXlsx("data/layers/bobo_bodemcodes_volledige_lijst.xlsx");
+    const wb    = await fetchXlsx("data/layers/bobo_bodemcodes_volledige_lijst.xlsx");
     const sheet = wb.Sheets["alle_codes"] ? "alle_codes" : firstSheetName(wb);
-    const rows = sheetToJson(wb, sheet);
+    const rows  = sheetToJson(wb, sheet);
     const groups = uniqSorted(rows.map(r => norm(r["groep"])).filter(Boolean));
     const codesBy = new Map();
     for (const g of groups) {
@@ -812,18 +786,18 @@ async function loadBoboOptions() {
         .filter(Boolean);
       codesBy.set(g, uniqSorted(codes));
     }
-    STATE.options.bobo.groups = groups;
-    STATE.options.bobo.codesByGroup = codesBy;
+    STATE.options.bobo.groups        = groups;
+    STATE.options.bobo.codesByGroup  = codesBy;
   } catch (e) {
     console.warn("BOBO opties niet geladen:", e);
-    STATE.options.bobo.groups = [];
+    STATE.options.bobo.groups       = [];
     STATE.options.bobo.codesByGroup = new Map();
   }
 }
 
 async function loadRegionOptions() {
   try {
-    const wb = await fetchXlsx("data/layers/List_options_regionale_soortenlijst.xlsx");
+    const wb   = await fetchXlsx("data/layers/List_options_regionale_soortenlijst.xlsx");
     const rows = sheetToJson(wb, firstSheetName(wb));
     const districts = rows
       .map(r => norm(r["Districten"] || r["districten"]))
@@ -839,9 +813,7 @@ async function loadRegionOptions() {
 async function loadTypologyAndRender() {
   const meta = \$("#resultsMeta");
   if (meta) meta.textContent = "Laden…";
-
   STATE.selected.facets = new Map();
-
   try {
     STATE.plants = await loadTypologyPlants(
       STATE.selected.typology,
@@ -852,13 +824,11 @@ async function loadTypologyAndRender() {
     if (meta) meta.textContent = "Fout bij laden data.";
     return;
   }
-
   const opts = computeBaseFilterOptions(STATE.plants);
-  fillSelect(\$("#soilType"),    opts.soil);
+  fillSelect(\$("#soilType"),     opts.soil);
   fillSelect(\$("#soilMoisture"), opts.moist);
-  fillSelect(\$("#acidity"),     opts.acid);
-  fillSelect(\$("#spread"),      opts.spread);
-
+  fillSelect(\$("#acidity"),      opts.acid);
+  fillSelect(\$("#spread"),       opts.spread);
   await applyLayers();
   renderExtraFilters(STATE.plants);
   render(STATE.plants);
@@ -874,13 +844,12 @@ function wire() {
   // Typology
   \$("#typology").addEventListener("change", async (e) => {
     STATE.selected.typology = e.target.value;
-    const subs = subtypeOptions(STATE.selected.typology);
+    const subs   = subtypeOptions(STATE.selected.typology);
     const subSel = \$("#subtype");
     subSel.innerHTML = "";
     for (const s of subs) {
       const opt = document.createElement("option");
-      opt.value = s;
-      opt.textContent = s;
+      opt.value = s; opt.textContent = s;
       subSel.appendChild(opt);
     }
     STATE.selected.subtype = subs[0];
@@ -936,7 +905,6 @@ function wire() {
     await applyLayers();
     render(STATE.plants);
   });
-
   const paint = \$("#regionModePaint");
   const filt  = \$("#regionModeFilter");
   if (paint && filt) {
@@ -944,7 +912,7 @@ function wire() {
       if (paint.checked) { STATE.selected.regionMode = "paint"; render(STATE.plants); }
     });
     filt.addEventListener("change", () => {
-      if (filt.checked) { STATE.selected.regionMode = "filter"; render(STATE.plants); }
+      if (filt.checked)  { STATE.selected.regionMode = "filter"; render(STATE.plants); }
     });
   }
 
@@ -992,61 +960,54 @@ async function init() {
   } catch (e) {
     console.error("Config laden mislukt:", e);
   }
-
   await loadBoboOptions();
   await loadRegionOptions();
 
-  // Typologie dropdown vullen
+  // Typologie dropdown
   const typSel = \$("#typology");
   typSel.innerHTML = "";
   for (const t of typologyOptions()) {
     const opt = document.createElement("option");
-    opt.value = t;
-    opt.textContent = t;
+    opt.value = t; opt.textContent = t;
     typSel.appendChild(opt);
   }
   STATE.selected.typology = typologyOptions()[0];
   typSel.value = STATE.selected.typology;
 
-  // Subtype dropdown vullen
+  // Subtype dropdown
   const subSel = \$("#subtype");
   subSel.innerHTML = "";
   const subs = subtypeOptions(STATE.selected.typology);
   for (const s of subs) {
     const opt = document.createElement("option");
-    opt.value = s;
-    opt.textContent = s;
+    opt.value = s; opt.textContent = s;
     subSel.appendChild(opt);
   }
   STATE.selected.subtype = subs[0];
   subSel.value = STATE.selected.subtype;
 
-  // District dropdown vullen
+  // District dropdown
   const districtSel = \$("#district");
   districtSel.innerHTML = "";
   const opt0 = document.createElement("option");
-  opt0.value = "";
-  opt0.textContent = "Kies district…";
+  opt0.value = ""; opt0.textContent = "Kies district…";
   districtSel.appendChild(opt0);
   for (const d of STATE.options.region.districts) {
     const opt = document.createElement("option");
-    opt.value = d;
-    opt.textContent = d;
+    opt.value = d; opt.textContent = d;
     districtSel.appendChild(opt);
   }
   STATE.selected.district = "";
 
-  // BOBO dropdowns vullen
-  const bg = \$("#boboGroup");
+  // BOBO dropdowns
+  const bg   = \$("#boboGroup");
   bg.innerHTML = "";
   const optG = document.createElement("option");
-  optG.value = "";
-  optG.textContent = "Kies groep…";
+  optG.value = ""; optG.textContent = "Kies groep…";
   bg.appendChild(optG);
   for (const g of STATE.options.bobo.groups) {
     const opt = document.createElement("option");
-    opt.value = g;
-    opt.textContent = g;
+    opt.value = g; opt.textContent = g;
     bg.appendChild(opt);
   }
   STATE.selected.boboGroup = "";
