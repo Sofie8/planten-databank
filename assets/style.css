@@ -3,274 +3,590 @@
    Stijl: warm groen-zwart met goud accent
    ============================================================ */
 
-:root{
-  --bg:#0b0f10;
-  --panel:#121a1c;
-  --muted:#93a4a8;
-  --text:#e7f2f4;
-  --line:#233133;
-  --chip:#1a2628;
-  --chip2:#163133;
-  --accent:#36c36a;
+:root {
+  /* Basis palet */
+  --bg:          #090d0b;
+  --panel:       #0f1710;
+  --panel2:      #131f14;
+  --muted:       #7a9e82;
+  --text:        #e8f0e9;
+  --line:        #1e3322;
+  --line2:       #2a4430;
+
+  /* Accenten */
+  --accent:      #c8a84b;   /* goud */
+  --accent2:     #3d9e5f;   /* groen */
+  --accent-glow: rgba(200,168,75,.15);
+
+  /* Chips / badges */
+  --chip:        #111a12;
+  --chip2:       #162018;
+
+  /* Tabel */
+  --table-bg:    #0c1410;
+  --table-head:  #111c12;
+  --row-hover:   rgba(61,158,95,.07);
 }
 
-*{box-sizing:border-box}
-html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Arial}
-a{color:var(--text)}
-code{background:#0f1516;border:1px solid var(--line);padding:2px 6px;border-radius:8px}
-.wrap{max-width:1100px;margin:0 auto;padding:16px}
-
-/* ─── TOPBAR ─────────────────────────────────────────────── */
-.topbar{
-  position:sticky;top:0;
-  background:rgba(11,15,16,.92);
-  backdrop-filter:blur(10px);
-  border-bottom:1px solid var(--line);
-  z-index:10;
-  padding:10px 16px;
+/* ── Reset ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.5 'Segoe UI', system-ui, -apple-system, Roboto, Arial;
+  -webkit-font-smoothing: antialiased;
 }
-.brand{display:flex;align-items:center;gap:12px}
-.logo{
-  width:40px;height:40px;
-  border-radius:12px;
-  background:linear-gradient(135deg,#163133,#0f1516);
-  display:grid;place-items:center;
-  font-size:18px;
-  border:1px solid var(--line)
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+code {
+  background: #0a1009;
+  border: 1px solid var(--line2);
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 12px;
 }
-.title{font-weight:700;font-size:16px}
 
-/* ─── PANEL ──────────────────────────────────────────────── */
-.panel{
-  background:var(--panel);
-  border:1px solid var(--line);
-  border-radius:16px;
-  padding:16px;
-  margin:16px 0;
-  box-shadow:0 12px 30px rgba(0,0,0,.25)
+/* ── Layout ─────────────────────────────────────────────── */
+.wrap { max-width: 1140px; margin: 0 auto; padding: 0 16px; }
+
+/* ── Topbar ─────────────────────────────────────────────── */
+.topbar {
+  position: sticky;
+  top: 0;
+  /* Verlaagd z-index zodat open <select> dropdowns er BOVEN vallen */
+  z-index: 9;
+  background: rgba(9,13,11,.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line2);
 }
-.panel.filters{
-  background:#162022;
-  border-color:rgba(54,195,106,.35);
+.topbar .wrap,
+.topbar > .wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 10px;
+  padding-bottom: 10px;
 }
-.panel.filters label{color:rgba(231,242,244,.92);font-weight:700;}
-.panel.filters .hint{color:rgba(231,242,244,.70);}
-.panel.filters select,
-.panel.filters input{background:#0b0f10;}
+/* v10 topbar .left */
+.topbar .left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 
-/* ─── GRID (filters) ─────────────────────────────────────── */
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-@media(max-width:980px){.grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:600px){.grid{grid-template-columns:1fr}}
+.brand { display: flex; align-items: center; gap: 12px; }
 
-.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+.logo {
+  width: 40px; height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #1a3320, #0a1209);
+  display: grid; place-items: center;
+  font-size: 20px;
+  border: 1px solid var(--line2);
+  box-shadow: 0 2px 12px rgba(0,0,0,.4);
+  flex-shrink: 0;
+}
+
+.title {
+  font-weight: 800;
+  font-size: 16px;
+  letter-spacing: .3px;
+  /* Subtiele goud-tint voor de naam */
+  background: linear-gradient(90deg, #e8f0e9 60%, var(--accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.subtitle { color: var(--muted); font-size: 12px; margin-top: 1px; }
+
+/* ── Panels ─────────────────────────────────────────────── */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line2);
+  border-radius: 18px;
+  padding: 20px;
+  margin: 16px 0;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.03) inset,
+    0 16px 40px rgba(0,0,0,.35);
+}
+.panel.small { padding: 12px 16px; }
+
+/* Filter panel extra accent */
+.panel.filters {
+  background: var(--panel2);
+  border-color: rgba(200,168,75,.25);
+  /* Subtiel goud randje bovenaan */
+  border-top: 2px solid rgba(200,168,75,.5);
+}
+
+/* ── Grid ────────────────────────────────────────────────── */
+.grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr 1fr 1fr 1fr;
+  gap: 12px;
+}
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+@media (max-width: 1080px) {
+  .grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 700px) {
+  .grid { grid-template-columns: 1fr 1fr; }
+  .grid2 { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+  .grid { grid-template-columns: 1fr; }
+}
+
+/* ── Form velden ─────────────────────────────────────────── */
+.field { position: relative; }
+
+.field label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .6px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+/* ── DE DROPDOWN FIX ─────────────────────────────────────── */
+/*
+   Problemen waren:
+   1. z-index van topbar (z-index:10) overlapte open select-menus
+      → opgelost: topbar z-index verlaagd naar 9
+   2. Geen -webkit-appearance reset → eigen OS-stijl blokkeerde styling
+   3. position:relative op .field + z-index op :focus zodat open
+      dropdown altijd boven andere elementen zweeft
+*/
 .field select,
-.field input{
-  width:100%;padding:10px;
-  border-radius:12px;
-  border:1px solid var(--line);
-  background:#0f1516;
-  color:var(--text);
-  outline:none
+.field input[type="text"],
+.field input[type="search"] {
+  width: 100%;
+  padding: 9px 32px 9px 11px;
+  border-radius: 10px;
+  border: 1px solid var(--line2);
+  background: #0a1209;
+  color: var(--text);
+  outline: none;
+  font-size: 13px;
+  font-family: inherit;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: border-color .15s, box-shadow .15s;
+
+  /* ← Cruciaal: reset browser-native select-stijl */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+
+  /* Aangepast pijltje in goud */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23c8a84b' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
 }
+
 .field select:focus,
-.field input:focus{
-  border-color:rgba(54,195,106,.6);
-  box-shadow:0 0 0 3px rgba(54,195,106,.12)
+.field input:focus {
+  border-color: rgba(200,168,75,.7);
+  box-shadow: 0 0 0 3px rgba(200,168,75,.12);
+  /* Zorg dat gefocust element boven buren zweeft */
+  position: relative;
+  z-index: 10;
 }
 
-.hint{color:var(--muted);font-size:12px;margin-top:6px}
-hr{border:0;border-top:1px solid var(--line);margin:14px 0}
-
-/* ─── LAYERS SECTIE ──────────────────────────────────────── */
-.layers-section{display:flex;flex-direction:column;gap:12px}
-.layer-title{color:var(--muted);font-size:12px}
-.chips{display:flex;flex-wrap:wrap;gap:8px}
-.chip{
-  display:flex;align-items:center;gap:8px;
-  background:var(--chip);
-  border:1px solid var(--line);
-  padding:8px 10px;
-  border-radius:999px;
-  cursor:pointer;
-  user-select:none
-}
-.chip input{accent-color:var(--accent)}
-
-/* Layer opties grid */
-.layer-options-grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
-  gap:12px;
-  margin-top:8px
+.field select:hover,
+.field input:hover {
+  border-color: var(--line2);
+  background-color: #0c1610;
 }
 
-/* ─── BUTTONS ────────────────────────────────────────────── */
-.btn{
-  background:var(--accent);
-  color:#07110b;
-  border:0;
-  border-radius:12px;
-  padding:10px 12px;
-  font-weight:700;
-  cursor:pointer
+/* Disabled/placeholder optie */
+.field select option[value=""] {
+  color: var(--muted);
 }
-.btn.ghost{
-  background:transparent;
-  color:var(--text);
-  border:1px solid var(--line)
-}
-.btn:hover{filter:brightness(1.05)}
-
-/* ─── RESULTS HEADER ─────────────────────────────────────── */
-.resultsHeader{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  margin-bottom:10px
-}
-.results-sub{color:var(--muted);font-size:12px}
-
-/* ─── TABLE ──────────────────────────────────────────────── */
-.tableWrap{overflow:auto;border:1px solid var(--line);border-radius:14px}
-table{width:100%;border-collapse:collapse;min-width:600px;background:#0f1516}
-th,td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
-th{
-  position:sticky;top:0;
-  background:#10191b;
-  text-align:left;
-  color:#cfe3e7;
-  font-size:12px
-}
-td{color:#dfecee}
-tbody tr{cursor:pointer}
-tbody tr:hover{background:rgba(54,195,106,.05)}
-
-/* ─── BADGES ─────────────────────────────────────────────── */
-.badges{display:flex;flex-wrap:wrap;gap:6px}
-.badge{
-  font-size:11px;padding:3px 8px;
-  border-radius:999px;
-  border:1px solid var(--line);
-  background:var(--chip2);
-  color:#cfe3e7
-}
-.badge.ok{border-color:rgba(54,195,106,.4)}
-
-/* ─── EXTRA FILTERS ──────────────────────────────────────── */
-.extra{
-  margin-top:14px;padding:10px;
-  border:1px solid var(--line);
-  border-radius:14px;
-  background:rgba(255,255,255,.02)
-}
-.extra-title{font-weight:900;cursor:pointer}
-.extra[open] .extra-title{margin-bottom:10px}
-#extraFiltersList{display:grid;gap:10px;margin-top:10px}
-.facet{
-  border:1px solid rgba(255,255,255,.12);
-  border-radius:12px;
-  padding:10px;
-  background:rgba(255,255,255,.03)
-}
-.facetHeader{
-  display:flex;justify-content:space-between;
-  align-items:center;
-  cursor:pointer;gap:10px
-}
-.facetTitle{font-weight:600}
-.facetMeta{opacity:.8;font-size:12px}
-.facetBody{margin-top:10px;display:none}
-.facetBody.open{display:block}
-.facetOptions{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
-  gap:6px
-}
-.opt{display:flex;gap:8px;align-items:flex-start}
-.opt input{margin-top:3px}
-.inline{display:flex;gap:16px;margin-top:8px;flex-wrap:wrap}
-.radio{display:flex;gap:8px;align-items:center;font-size:14px}
-
-/* ─── DRAWER ─────────────────────────────────────────────── */
-.drawer{
-  position:fixed;top:0;right:0;
-  width:min(460px,92vw);
-  height:100vh;
-  background:#0f1516;
-  border-left:1px solid var(--line);
-  transform:translateX(110%);
-  transition:transform .18s ease;
-  z-index:50;
-  box-shadow:-18px 0 40px rgba(0,0,0,.45)
-}
-.drawer.open{transform:translateX(0)}
-.drawerHead{
-  display:flex;align-items:center;
-  justify-content:space-between;
-  gap:12px;padding:14px;
-  border-bottom:1px solid var(--line);
-  background:rgba(11,15,16,.92);
-  backdrop-filter:blur(10px)
-}
-.drawerTitle{font-weight:900;font-size:16px}
-.drawerSub{color:var(--muted);font-size:12px;margin-top:2px}
-.drawerBody{padding:14px;overflow:auto;height:calc(100vh - 64px)}
-
-/* ─── IMG BOX / CAROUSEL ─────────────────────────────────── */
-.imgBox{
-  border:1px solid var(--line);
-  border-radius:14px;
-  overflow:hidden;
-  background:#0b0f10;
-  min-height:160px;
-  display:grid;
-  place-items:center
-}
-.imgBox img{width:100%;height:auto;display:block}
-.carousel{position:relative;width:100%}
-.carouselMain{width:100%;height:auto;display:block;border-radius:14px}
-.carouselBtn{
-  position:absolute;top:50%;
-  transform:translateY(-50%);
-  background:rgba(0,0,0,.55);
-  color:#fff;border:none;
-  border-radius:50%;
-  width:36px;height:36px;
-  font-size:20px;
-  cursor:pointer;
-  display:grid;place-items:center;
-  z-index:2
-}
-.carouselBtn.prev{left:8px}
-.carouselBtn.next{right:8px}
-.carouselCounter{
-  text-align:center;
-  font-size:12px;
-  color:var(--muted);
-  padding:6px 0
+.field select option {
+  background: #0f1a10;
+  color: var(--text);
 }
 
-/* ─── KV (key-value rijen in drawer) ────────────────────── */
-.kv{margin-top:12px;border:1px solid var(--line);border-radius:14px;overflow:hidden}
-.kvRow{display:flex;gap:10px;padding:10px 12px;border-top:1px solid var(--line)}
-.kvRow:first-child{border-top:0}
-.kv .k{width:120px;color:var(--muted);font-size:12px}
-.kv .v{flex:1}
-
-/* ─── FYTO ───────────────────────────────────────────────── */
-.fytoBox{
-  margin-top:12px;
-  border:1px solid rgba(54,195,106,.35);
-  border-radius:14px;
-  padding:12px;
-  background:rgba(54,195,106,.06)
+.hint {
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 5px;
+  line-height: 1.4;
 }
-.fytoTitle{font-weight:900;margin-bottom:8px}
-.fytoField .k{color:var(--muted);font-size:12px;margin-top:10px}
-.fytoField .v{margin-top:4px;white-space:pre-wrap}
 
-/* ─── MISC ───────────────────────────────────────────────── */
-details summary{cursor:pointer}
-.pad{padding:8px 2px}
+/* ── Scheidingslijn ──────────────────────────────────────── */
+hr {
+  border: 0;
+  border-top: 1px solid var(--line2);
+  margin: 16px 0;
+}
+
+/* ── Lagen / chips ───────────────────────────────────────── */
+.layers { margin-top: 4px; }
+.layer-title {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--chip);
+  border: 1px solid var(--line2);
+  padding: 7px 13px;
+  border-radius: 999px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background .15s, border-color .15s, box-shadow .15s;
+}
+.chip:hover {
+  background: #172319;
+  border-color: rgba(200,168,75,.4);
+  box-shadow: 0 0 0 3px rgba(200,168,75,.07);
+}
+.chip input[type="checkbox"] {
+  accent-color: var(--accent);
+  width: 14px; height: 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* ── Knoppen ─────────────────────────────────────────────── */
+.btn {
+  background: linear-gradient(135deg, #d4a83a, #b8922e);
+  color: #0a0800;
+  border: 0;
+  border-radius: 10px;
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: .2px;
+  transition: filter .15s, box-shadow .15s;
+  box-shadow: 0 2px 8px rgba(200,168,75,.25);
+  white-space: nowrap;
+}
+.btn:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 4px 16px rgba(200,168,75,.35);
+}
+.btn.ghost {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--line2);
+  box-shadow: none;
+}
+.btn.ghost:hover {
+  background: rgba(255,255,255,.04);
+  border-color: rgba(200,168,75,.4);
+}
+
+/* ── Resultaten header ───────────────────────────────────── */
+.results-head,
+.resultsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.results-title { font-weight: 800; font-size: 16px; }
+.results-sub,
+.resultsMeta { color: var(--muted); font-size: 12px; }
+
+/* ── Tabel ───────────────────────────────────────────────── */
+.tableWrap {
+  overflow: auto;
+  border: 1px solid var(--line2);
+  border-radius: 14px;
+  /* Zorg dat tabel NOOIT topbar overlapt */
+  position: relative;
+  z-index: 1;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+  background: var(--table-bg);
+}
+
+th, td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+  text-align: left;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background: var(--table-head);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  /* Sticky th moet BOVEN tabelrijen maar ONDER topbar */
+  z-index: 2;
+  border-bottom: 2px solid var(--line2);
+}
+
+td { color: #d6e8d8; font-size: 13px; }
+
+tbody tr {
+  cursor: pointer;
+  transition: background .1s;
+}
+tbody tr:hover { background: var(--row-hover); }
+tbody tr:last-child td { border-bottom: 0; }
+
+/* Latijnse naam cursief */
+tbody tr td:first-child {
+  font-style: italic;
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* ── Badges ──────────────────────────────────────────────── */
+.badges { display: flex; flex-wrap: wrap; gap: 5px; }
+.badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line2);
+  background: var(--chip2);
+  color: #b8d4bb;
+  white-space: nowrap;
+}
+.badge.ok {
+  border-color: rgba(200,168,75,.45);
+  background: rgba(200,168,75,.08);
+  color: var(--accent);
+}
+.badge.green {
+  border-color: rgba(61,158,95,.45);
+  background: rgba(61,158,95,.08);
+  color: #6dd68a;
+}
+
+/* ── Extra filters (collapsible) ─────────────────────────── */
+.extra {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--line2);
+  border-radius: 14px;
+  background: rgba(255,255,255,.015);
+}
+.extra-title {
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--muted);
+  list-style: none;  /* verwijder standaard details-pijl */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+/* Eigen pijl voor <summary> */
+.extra-title::before {
+  content: '▶';
+  font-size: 9px;
+  color: var(--accent);
+  transition: transform .2s;
+  display: inline-block;
+}
+details[open] .extra-title::before {
+  transform: rotate(90deg);
+}
+details[open] .extra-title { margin-bottom: 10px; color: var(--text); }
+
+#extraFiltersList {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.facet {
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,.02);
+}
+.facetHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  gap: 10px;
+}
+.facetTitle { font-weight: 600; font-size: 13px; }
+.facetMeta { opacity: .7; font-size: 11px; }
+.facetBody { margin-top: 10px; display: none; }
+.facetBody.open { display: block; }
+.facetOptions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 6px;
+}
+.opt { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; }
+.opt input { margin-top: 3px; accent-color: var(--accent2); }
+
+/* ── Radio / inline ──────────────────────────────────────── */
+.inline { display: flex; gap: 16px; margin-top: 8px; flex-wrap: wrap; }
+.radio {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+  cursor: pointer;
+}
+.radio input { accent-color: var(--accent); }
+
+/* ── Drawer (plant details) ──────────────────────────────── */
+.drawer {
+  position: fixed;
+  top: 0; right: 0;
+  width: min(480px, 94vw);
+  height: 100vh;
+  background: #0c1510;
+  border-left: 1px solid var(--line2);
+  transform: translateX(110%);
+  transition: transform .22s cubic-bezier(.4,0,.2,1);
+  /* Drawer moet BOVEN alles, ook boven topbar */
+  z-index: 100;
+  box-shadow: -20px 0 60px rgba(0,0,0,.6);
+}
+.drawer.open { transform: translateX(0); }
+
+.drawerHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line2);
+  background: rgba(9,13,11,.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.drawerTitle {
+  font-weight: 800;
+  font-size: 17px;
+  font-style: italic;
+}
+.drawerSub { color: var(--muted); font-size: 12px; margin-top: 3px; }
+
+.drawerBody {
+  padding: 16px 18px;
+  overflow-y: auto;
+  height: calc(100vh - 66px);
+}
+
+/* Scrollbar in drawer */
+.drawerBody::-webkit-scrollbar { width: 5px; }
+.drawerBody::-webkit-scrollbar-track { background: transparent; }
+.drawerBody::-webkit-scrollbar-thumb {
+  background: var(--line2);
+  border-radius: 999px;
+}
+
+.imgBox {
+  border: 1px solid var(--line2);
+  border-radius: 14px;
+  overflow: hidden;
+  background: #080e09;
+  min-height: 160px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+.imgBox img { width: 100%; height: auto; display: block; }
+
+.kv {
+  margin-top: 14px;
+  border: 1px solid var(--line2);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.kvRow {
+  display: flex;
+  gap: 10px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--line);
+}
+.kvRow:first-child { border-top: 0; }
+.kv .k {
+  width: 120px;
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  padding-top: 2px;
+}
+.kv .v { flex: 1; font-size: 13px; }
+
+.fytoBox {
+  margin-top: 14px;
+  border: 1px solid rgba(200,168,75,.3);
+  border-radius: 14px;
+  padding: 14px;
+  background: rgba(200,168,75,.05);
+}
+.fytoTitle {
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--accent);
+  letter-spacing: .3px;
+  margin-bottom: 10px;
+}
+.fytoField .k {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  margin-top: 10px;
+}
+.fytoField:first-of-type .k { margin-top: 0; }
+.fytoField .v {
+  margin-top: 4px;
+  font-size: 13px;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+/* ── Misc ────────────────────────────────────────────────── */
+.footnote { color: var(--muted); font-size: 12px; margin-top: 12px; }
+.footer { color: var(--muted); font-size: 12px; padding: 16px 0 32px; }
+.right { display: flex; gap: 10px; align-items: center; }
+details summary { cursor: pointer; }
+.pad { padding: 8px 2px; }
