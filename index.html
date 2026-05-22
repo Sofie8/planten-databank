@@ -1,166 +1,153 @@
 <!doctype html>
 <html lang="nl">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Planten Databank</title>
-  <link rel="stylesheet" href="assets/style.css" />
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Planten Databank</title>
+<link rel="stylesheet" href="assets/style.css" />
 </head>
-
 <body>
-  <header class="wrap topbar">
-    <div class="left">
-      <div class="logo" aria-hidden="true">🌿</div>
-      <div class="title">Planten Databank</div>
-    </div>
-  </header>
+<header class="wrap topbar">
+  <div class="left">
+    <div class="logo" aria-hidden="true">🌿</div>
+    <div class="title">Planten Databank</div>
+  </div>
+</header>
 
-  <main class="wrap">
-    <!-- FILTERS -->
-    <section class="panel filters">
-      <div class="grid">
-        <div class="field">
-          <label>1) Typologie</label>
-          <select id="typology"></select>
-        </div>
+<main class="wrap">
 
-        <div class="field">
-          <label>2) Subtype</label>
-          <select id="subtype"></select>
-        </div>
-
-        <div class="field">
-          <label>3) Bodemtype</label>
-          <select id="soilType"></select>
-        </div>
-
-        <div class="field">
-          <label>4) Bodemvochtigheid</label>
-          <select id="soilMoisture"></select>
-        </div>
-
-        <div class="field">
-          <label>5) Zuurtegraad (pH)</label>
-          <select id="acidity"></select>
-        </div>
-
-        <div class="field">
-          <label>6) Verspreiding</label>
-          <select id="spread"></select>
-        </div>
+  <!-- FILTERS -->
+  <section class="panel filters">
+    <div class="grid">
+      <div class="field">
+        <label>1) Typologie</label>
+        <select id="typology"></select>
       </div>
-
-      <!-- Extra filters (collapsible, zoals gevraagd) -->
-      <details class="extra" id="extraFiltersBox">
-        <summary class="extra-title">Extra filters</summary>
-        <div id="extraFiltersList"></div>
-      </details>
-
-      <hr />
-
-      <!-- LAYERS -->
-      <div class="layers">
-        <div class="chips">
-          <label class="chip"><input type="checkbox" id="layer_klimaat" /> Klimaatbomenlijst</label>
-          <label class="chip"><input type="checkbox" id="layer_amber" /> AMBER-lijst</label>
-          <label class="chip"><input type="checkbox" id="layer_regionaal" /> Regionale soortenlijst</label>
-          <label class="chip"><input type="checkbox" id="layer_bobo" /> BOBO-regio</label>
-          <label class="chip"><input type="checkbox" id="layer_fyto" /> Fytoremediatie</label>
-        </div>
-
-        <div class="grid" style="margin-top:12px;">
-          <div class="field" id="districtWrap" style="display:none;">
-            <label>Regionale lijst: district</label>
-            <select id="district"></select>
-            <div class="inline" style="margin-top:10px;">
-              <label class="radio"><input type="radio" name="regionMode" id="regionModePaint" value="paint" checked> Labelen</label>
-              <label class="radio"><input type="radio" name="regionMode" id="regionModeFilter" value="filter"> Alleen tonen</label>
-            </div>
-          </div>
-
-          <div class="field" id="boboWrap" style="display:none;">
-            <label>BOBO: groep</label>
-            <select id="boboGroup"></select>
-          </div>
-
-          <div class="field" id="boboCodeWrap" style="display:none;">
-            <label>BOBO: bodemcode</label>
-            <select id="boboCode"></select>
-          </div>
-        </div>
+      <div class="field">
+        <label>2) Subtype</label>
+        <select id="subtype"></select>
       </div>
-    </section>
-
-    <!-- RESULTS -->
-    <section class="panel">
-      <div class="resultsHeader">
-        <div class="resultsMeta" id="resultsMeta">—</div>
-        <button class="btn" id="exportCsv">Export CSV</button>
+      <div class="field">
+        <label>3) Bodemtype</label>
+        <select id="soilType"></select>
       </div>
-
-      <div class="tableWrap">
-        <table id="results">
-          <thead>
-            <tr>
-              <th>Latijnse naam</th>
-              <th>Nederlandse naam</th>
-              <th>Bodemtype</th>
-              <th>Vocht</th>
-              <th>pH</th>
-              <th>Lagen</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+      <div class="field">
+        <label>4) Bodemvochtigheid</label>
+        <select id="soilMoisture"></select>
       </div>
-    </section>
-  </main>
-
-  <!-- DRAWER -->
-  <aside class="drawer" id="detailDrawer" aria-hidden="true">
-    <div class="drawerHead">
-      <div>
-        <div class="drawerTitle" id="drawerTitle">Plant</div>
-        <div class="drawerSub" id="drawerSub"></div>
+      <div class="field">
+        <label>5) Zuurtegraad (pH)</label>
+        <select id="acidity"></select>
       </div>
-      <button class="btn ghost" id="drawerClose">Sluiten</button>
+      <div class="field">
+        <label>6) Verspreiding</label>
+        <select id="spread"></select>
+      </div>
     </div>
 
-    <div class="drawerBody">
-      <div class="imgBox" id="drawerImages"></div>
+    <!-- Extra filters (collapsible) -->
+    <details class="extra" id="extraFiltersBox">
+      <summary class="extra-title">Extra filters</summary>
+      <div id="extraFiltersList"></div>
+    </details>
 
-      <div class="kv">
-        <div class="kvRow"><div class="k">Bodem</div><div class="v" id="drawerSoil">—</div></div>
-        <div class="kvRow"><div class="k">Vocht</div><div class="v" id="drawerMoist">—</div></div>
-        <div class="kvRow"><div class="k">pH</div><div class="v" id="drawerPh">—</div></div>
-        <div class="kvRow"><div class="k">Verspreiding</div><div class="v" id="drawerSpread">—</div></div>
+    <hr />
+
+    <!-- LAYERS -->
+    <div class="layers">
+      <div class="layer-title">7) Lagen "painten" (optioneel)</div>
+      <div class="chips">
+        <label class="chip"><input type="checkbox" id="layer_klimaat" /> Klimaatbomenlijst</label>
+        <label class="chip"><input type="checkbox" id="layer_amber" /> AMBER-lijst</label>
+        <label class="chip"><input type="checkbox" id="layer_regionaal" /> Regionale soortenlijst</label>
+        <label class="chip"><input type="checkbox" id="layer_bobo" /> BOBO-regio</label>
+        <label class="chip"><input type="checkbox" id="layer_fyto" /> Fytoremediatie</label>
       </div>
-
-      <div class="fytoBox" id="drawerFyto" style="display:none;">
-        <div class="fytoTitle">Fytoremediatie</div>
-
-        <div class="fytoField">
-          <div class="k">Comments on phytoremedial effectiveness</div>
-          <div class="v" id="fytoComments">—</div>
+      <div class="grid" style="margin-top:12px;">
+        <div class="field" id="districtWrap" style="display:none;">
+          <label>Regionale lijst: district</label>
+          <select id="district"></select>
+          <div class="inline" style="margin-top:10px;">
+            <label class="radio"><input type="radio" name="regionMode" id="regionModePaint" value="paint" checked> Labelen</label>
+            <label class="radio"><input type="radio" name="regionMode" id="regionModeFilter" value="filter"> Alleen tonen</label>
+          </div>
         </div>
-
-        <div class="fytoField">
-          <div class="k">Continent-Country-City-Site</div>
-          <div class="v" id="fytoSite">—</div>
+        <div class="field" id="boboWrap" style="display:none;">
+          <label>BOBO: groep</label>
+          <select id="boboGroup"></select>
         </div>
-
-        <div class="fytoField">
-          <div class="k">Reference (author, year, doi)</div>
-          <div class="v" id="fytoRef">—</div>
+        <div class="field" id="boboCodeWrap" style="display:none;">
+          <label>BOBO: bodemcode</label>
+          <select id="boboCode"></select>
         </div>
       </div>
     </div>
-  </aside>
 
-  <!-- ✅ SheetJS via CDN (dus GEEN local xlsx.full.min.js nodig) -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  </section>
 
-  <!-- jouw app -->
-  <script src="assets/app.js"></script>
+  <!-- RESULTS -->
+  <section class="panel">
+    <div class="resultsHeader">
+      <div class="resultsMeta" id="resultsMeta">—</div>
+      <button class="btn" id="exportCsv">Export CSV</button>
+    </div>
+    <div class="tableWrap">
+      <table id="results">
+        <thead>
+          <tr>
+            <th>Latijnse naam</th>
+            <th>Nederlandse naam</th>
+            <th>Bodemtype</th>
+            <th>Vocht</th>
+            <th>pH</th>
+            <th>Lagen</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<!-- DRAWER -->
+<aside class="drawer" id="detailDrawer" aria-hidden="true">
+  <div class="drawerHead">
+    <div>
+      <div class="drawerTitle" id="drawerTitle">Plant</div>
+      <div class="drawerSub" id="drawerSub"></div>
+    </div>
+    <button class="btn ghost" id="drawerClose">Sluiten</button>
+  </div>
+  <div class="drawerBody">
+    <div class="imgBox" id="drawerImages"></div>
+    <div class="kv">
+      <div class="kvRow"><div class="k">Bodem</div><div class="v" id="drawerSoil">—</div></div>
+      <div class="kvRow"><div class="k">Vocht</div><div class="v" id="drawerMoist">—</div></div>
+      <div class="kvRow"><div class="k">pH</div><div class="v" id="drawerPh">—</div></div>
+      <div class="kvRow"><div class="k">Verspreiding</div><div class="v" id="drawerSpread">—</div></div>
+    </div>
+    <div class="fytoBox" id="drawerFyto" style="display:none;">
+      <div class="fytoTitle">Fytoremediatie</div>
+      <div class="fytoField">
+        <div class="k">Comments on phytoremedial effectiveness</div>
+        <div class="v" id="fytoComments">—</div>
+      </div>
+      <div class="fytoField">
+        <div class="k">Continent-Country-City-Site</div>
+        <div class="v" id="fytoSite">—</div>
+      </div>
+      <div class="fytoField">
+        <div class="k">Reference (author, year, doi)</div>
+        <div class="v" id="fytoRef">—</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- SheetJS EERST laden, daarna app.js — beide defer zodat DOM klaar is -->
+<script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script defer src="assets/app.js"></script>
+
 </body>
 </html>
