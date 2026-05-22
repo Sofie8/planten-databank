@@ -15,18 +15,16 @@
       <div class="brand">
         <div class="logo">🌿</div>
         <div>
-          <div class="title">PlantenDatabank (mockup)</div>
-          <div class="subtitle">Typologie → filters → lagen “painten” (Amber/Klimaat/Regionaal/BOBO/Fyto)</div>
+          <div class="title">Planten Databank</div>
+          
         </div>
       </div>
-      <div class="right">
-        <a class="btn ghost" href="README.html" target="_blank" rel="noreferrer">Installatie</a>
-      </div>
+      <div class="right"></div>
     </div>
   </header>
 
   <main class="wrap">
-    <section class="panel">
+    <section class="panel filters">
       <div class="grid">
         <div class="field">
           <label>1) Typologie</label>
@@ -62,11 +60,7 @@
         </div>
       </div>
 
-      <div class="extra">
-        <div class="extra-title">Extra filters (optioneel)</div>
-        <div class="hint">Deze verschijnen automatisch als er kolommen bestaan die beginnen met <code>kenmerk_</code> (bv. <code>kenmerk_standplaats</code>, <code>kenmerk_bloemkleur</code>, …). Klik op een filter om opties te zien.</div>
-        <div id="extraFiltersList"></div>
-      </div>
+      <details class="extra" id="extraFiltersBox"><summary class="extra-title">Extra filters</summary><div id="extraFiltersList"></div></details>
 
       <hr />
 
@@ -108,9 +102,7 @@
           <div class="results-title">Resultaten</div>
           <div class="results-sub" id="resultsMeta">—</div>
         </div>
-        <div class="right">
-          <button class="btn" id="exportCsv">Export CSV</button>
-        </div>
+        <div class="right"></div>
       </div>
 
       <div class="tableWrap">
@@ -133,23 +125,49 @@
       </div>
     </section>
 
-    <section class="panel small">
-      <details>
-        <summary>Wat moet ik uploaden om dit te laten werken op GitHub Pages?</summary>
-        <div class="pad">
-          <p>Minstens:</p>
-          <ul>
-            <li><code>data/typologies/&lt;bestand&gt;.xlsx</code> met kolommen <b>Latijnse naam</b>, <b>Nederlandse naam</b> en (optioneel) <b>kenmerk_bodemtype</b>, <b>kenmerk_bodemvochtigheid</b>, <b>kenmerk_zuurtegraad</b>.</li>
-            <li>Optioneel: extra lagen in <code>data/layers/</code>.</li>
-            <li>Configuratie via <code>data/config.json</code> (makkelijk) of <code>data/layers/backbone_lists.xlsx</code> (jouw backbone).</li>
-          </ul>
-        </div>
-      </details>
-    </section>
-  </main>
+    
+  
+</main>
+<aside class="drawer" id="detailDrawer" aria-hidden="true">
+  <div class="drawerHead">
+    <div>
+      <div class="drawerTitle" id="drawerTitle">Plant</div>
+      <div class="drawerSub" id="drawerSub"></div>
+    </div>
+    <button class="btn ghost" id="drawerClose">Sluiten</button>
+  </div>
+  <div class="drawerBody">
+    <div class="imgBox" id="drawerImages"></div>
 
-  <footer class="wrap footer">
-    Mockup (client-side). Geen server nodig. Werkt op GitHub Pages.
-  </footer>
+    <div class="kv">
+      <div class="kvRow"><div class="k">Bodem</div><div class="v" id="drawerSoil">—</div></div>
+      <div class="kvRow"><div class="k">Vocht</div><div class="v" id="drawerMoist">—</div></div>
+      <div class="kvRow"><div class="k">pH</div><div class="v" id="drawerPh">—</div></div>
+      <div class="kvRow"><div class="k">Verspreiding</div><div class="v" id="drawerSpread">—</div></div>
+    </div>
+
+    <div class="fytoBox" id="drawerFyto" style="display:none;">
+      <div class="fytoTitle">Fytoremediatie</div>
+
+      <div class="fytoField">
+        <div class="k">Comments on phytoremedial effectiveness</div>
+        <div class="v" id="fytoComments">—</div>
+      </div>
+
+      <div class="fytoField">
+        <div class="k">Continent-Country-City-Site</div>
+        <div class="v" id="fytoSite">—</div>
+      </div>
+
+      <div class="fytoField">
+        <div class="k">Reference (author, year, doi)</div>
+        <div class="v" id="fytoRef">—</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+
+  <footer class="wrap footer"></footer>
 </body>
 </html>
