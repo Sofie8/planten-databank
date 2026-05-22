@@ -463,7 +463,7 @@ async function applyLayers() {
 
 // ─── TABEL ────────────────────────────────────────────────────────────────────
 function rebuildTableHeader() {
-  const thead = \$("#results thead");
+  const thead = $("#results thead");
   if (!thead) return;
   const base = ["Latijnse naam", "Nederlandse naam", "Bodemtype", "Vocht", "pH", "Lagen"];
   const cols = [...base, ...STATE.table.extraCols.map(c => c.label)];
