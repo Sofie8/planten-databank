@@ -8,7 +8,7 @@
 
 "use strict";
 
-const \$ = (sel) => document.querySelector(sel);
+const $ = (sel) => document.querySelector(sel);
 
 // ─── CONSTANTEN ───────────────────────────────────────────────────────────────
 const IMAGE_BASE_URL = "https://pub-bb204453b9b642598d8514f7ac4f68be.r2.dev";
