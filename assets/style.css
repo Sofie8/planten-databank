@@ -1,8 +1,9 @@
 /* ============================================================
    PLANTEN DATABANK — Botanisch Donker Thema
    Stijl: warm groen-zwart met goud accent
-   ============================================================ */
-
+   v11 — fixes: ▶ buiten quotes, carousel CSS toegevoegd,
+         z-index verfijnd
+============================================================ */
 :root {
   /* Basis palet */
   --bg:          #090d0b;
@@ -12,16 +13,13 @@
   --text:        #e8f0e9;
   --line:        #1e3322;
   --line2:       #2a4430;
-
   /* Accenten */
   --accent:      #c8a84b;   /* goud */
   --accent2:     #3d9e5f;   /* groen */
   --accent-glow: rgba(200,168,75,.15);
-
   /* Chips / badges */
   --chip:        #111a12;
   --chip2:       #162018;
-
   /* Tabel */
   --table-bg:    #0c1410;
   --table-head:  #111c12;
@@ -51,17 +49,21 @@ code {
 .wrap { max-width: 1140px; margin: 0 auto; padding: 0 16px; }
 
 /* ── Topbar ─────────────────────────────────────────────── */
+/*
+  FIX #2: De topbar IS nu zelf de .wrap niet meer —
+  zie index.html waar <header class="topbar"> en
+  <div class="wrap"> genest zijn.
+  z-index blijft 9 zodat open <select> dropdowns er BOVEN vallen.
+*/
 .topbar {
   position: sticky;
   top: 0;
-  /* Verlaagd z-index zodat open <select> dropdowns er BOVEN vallen */
   z-index: 9;
   background: rgba(9,13,11,.95);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--line2);
 }
-.topbar .wrap,
 .topbar > .wrap {
   display: flex;
   align-items: center;
@@ -70,15 +72,12 @@ code {
   padding-top: 10px;
   padding-bottom: 10px;
 }
-/* v10 topbar .left */
 .topbar .left {
   display: flex;
   align-items: center;
   gap: 12px;
 }
-
-.brand { display: flex; align-items: center; gap: 12px; }
-
+.brand  { display: flex; align-items: center; gap: 12px; }
 .logo {
   width: 40px; height: 40px;
   border-radius: 12px;
@@ -89,12 +88,10 @@ code {
   box-shadow: 0 2px 12px rgba(0,0,0,.4);
   flex-shrink: 0;
 }
-
 .title {
   font-weight: 800;
   font-size: 16px;
   letter-spacing: .3px;
-  /* Subtiele goud-tint voor de naam */
   background: linear-gradient(90deg, #e8f0e9 60%, var(--accent));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -114,12 +111,9 @@ code {
     0 16px 40px rgba(0,0,0,.35);
 }
 .panel.small { padding: 12px 16px; }
-
-/* Filter panel extra accent */
 .panel.filters {
   background: var(--panel2);
   border-color: rgba(200,168,75,.25);
-  /* Subtiel goud randje bovenaan */
   border-top: 2px solid rgba(200,168,75,.5);
 }
 
@@ -139,7 +133,7 @@ code {
   .grid { grid-template-columns: repeat(3, 1fr); }
 }
 @media (max-width: 700px) {
-  .grid { grid-template-columns: 1fr 1fr; }
+  .grid  { grid-template-columns: 1fr 1fr; }
   .grid2 { grid-template-columns: 1fr; }
 }
 @media (max-width: 480px) {
@@ -147,8 +141,9 @@ code {
 }
 
 /* ── Form velden ─────────────────────────────────────────── */
-.field { position: relative; }
-
+.field {
+  position: relative;   /* FIX #3: altijd position:relative, niet alleen bij focus */
+}
 .field label {
   display: block;
   font-size: 11px;
@@ -159,15 +154,7 @@ code {
   margin-bottom: 6px;
 }
 
-/* ── DE DROPDOWN FIX ─────────────────────────────────────── */
-/*
-   Problemen waren:
-   1. z-index van topbar (z-index:10) overlapte open select-menus
-      → opgelost: topbar z-index verlaagd naar 9
-   2. Geen -webkit-appearance reset → eigen OS-stijl blokkeerde styling
-   3. position:relative op .field + z-index op :focus zodat open
-      dropdown altijd boven andere elementen zweeft
-*/
+/* ── Dropdown fix ────────────────────────────────────────── */
 .field select,
 .field input[type="text"],
 .field input[type="search"] {
@@ -183,37 +170,27 @@ code {
   line-height: 1.4;
   cursor: pointer;
   transition: border-color .15s, box-shadow .15s;
-
-  /* ← Cruciaal: reset browser-native select-stijl */
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
-
   /* Aangepast pijltje in goud */
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23c8a84b' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 10px center;
 }
-
 .field select:focus,
 .field input:focus {
   border-color: rgba(200,168,75,.7);
   box-shadow: 0 0 0 3px rgba(200,168,75,.12);
-  /* Zorg dat gefocust element boven buren zweeft */
-  position: relative;
+  /* FIX #3: z-index werkt nu correct omdat .field al position:relative heeft */
   z-index: 10;
 }
-
 .field select:hover,
 .field input:hover {
   border-color: var(--line2);
   background-color: #0c1610;
 }
-
-/* Disabled/placeholder optie */
-.field select option[value=""] {
-  color: var(--muted);
-}
+.field select option[value=""] { color: var(--muted); }
 .field select option {
   background: #0f1a10;
   color: var(--text);
@@ -249,7 +226,6 @@ hr {
   gap: 8px;
   align-items: center;
 }
-
 .chip {
   display: inline-flex;
   align-items: center;
@@ -315,34 +291,30 @@ hr {
   gap: 10px;
   margin-bottom: 12px;
 }
-.results-title { font-weight: 800; font-size: 16px; }
+.results-title  { font-weight: 800; font-size: 16px; }
 .results-sub,
-.resultsMeta { color: var(--muted); font-size: 12px; }
+.resultsMeta    { color: var(--muted); font-size: 12px; }
 
 /* ── Tabel ───────────────────────────────────────────────── */
 .tableWrap {
   overflow: auto;
   border: 1px solid var(--line2);
   border-radius: 14px;
-  /* Zorg dat tabel NOOIT topbar overlapt */
   position: relative;
   z-index: 1;
 }
-
 table {
   width: 100%;
   border-collapse: collapse;
   min-width: 760px;
   background: var(--table-bg);
 }
-
 th, td {
   padding: 10px 14px;
   border-bottom: 1px solid var(--line);
   vertical-align: top;
   text-align: left;
 }
-
 th {
   position: sticky;
   top: 0;
@@ -352,21 +324,16 @@ th {
   font-weight: 700;
   letter-spacing: .5px;
   text-transform: uppercase;
-  /* Sticky th moet BOVEN tabelrijen maar ONDER topbar */
   z-index: 2;
   border-bottom: 2px solid var(--line2);
 }
-
 td { color: #d6e8d8; font-size: 13px; }
-
 tbody tr {
   cursor: pointer;
   transition: background .1s;
 }
 tbody tr:hover { background: var(--row-hover); }
 tbody tr:last-child td { border-bottom: 0; }
-
-/* Latijnse naam cursief */
 tbody tr td:first-child {
   font-style: italic;
   color: var(--text);
@@ -408,12 +375,12 @@ tbody tr td:first-child {
   font-size: 13px;
   cursor: pointer;
   color: var(--muted);
-  list-style: none;  /* verwijder standaard details-pijl */
+  list-style: none;
   display: flex;
   align-items: center;
   gap: 8px;
 }
-/* Eigen pijl voor <summary> */
+/* FIX #1: ▶ stond eerder BUITEN de quotes — nu correct binnen content:'...' */
 .extra-title::before {
   content: '▶';
   font-size: 9px;
@@ -421,9 +388,7 @@ tbody tr td:first-child {
   transition: transform .2s;
   display: inline-block;
 }
-details[open] .extra-title::before {
-  transform: rotate(90deg);
-}
+details[open] .extra-title::before { transform: rotate(90deg); }
 details[open] .extra-title { margin-bottom: 10px; color: var(--text); }
 
 #extraFiltersList {
@@ -431,7 +396,6 @@ details[open] .extra-title { margin-bottom: 10px; color: var(--text); }
   gap: 10px;
   margin-top: 10px;
 }
-
 .facet {
   border: 1px solid rgba(255,255,255,.08);
   border-radius: 12px;
@@ -446,8 +410,8 @@ details[open] .extra-title { margin-bottom: 10px; color: var(--text); }
   gap: 10px;
 }
 .facetTitle { font-weight: 600; font-size: 13px; }
-.facetMeta { opacity: .7; font-size: 11px; }
-.facetBody { margin-top: 10px; display: none; }
+.facetMeta  { opacity: .7; font-size: 11px; }
+.facetBody  { margin-top: 10px; display: none; }
 .facetBody.open { display: block; }
 .facetOptions {
   display: grid;
@@ -478,12 +442,10 @@ details[open] .extra-title { margin-bottom: 10px; color: var(--text); }
   border-left: 1px solid var(--line2);
   transform: translateX(110%);
   transition: transform .22s cubic-bezier(.4,0,.2,1);
-  /* Drawer moet BOVEN alles, ook boven topbar */
   z-index: 100;
   box-shadow: -20px 0 60px rgba(0,0,0,.6);
 }
 .drawer.open { transform: translateX(0); }
-
 .drawerHead {
   display: flex;
   align-items: center;
@@ -500,8 +462,7 @@ details[open] .extra-title { margin-bottom: 10px; color: var(--text); }
   font-size: 17px;
   font-style: italic;
 }
-.drawerSub { color: var(--muted); font-size: 12px; margin-top: 3px; }
-
+.drawerSub  { color: var(--muted); font-size: 12px; margin-top: 3px; }
 .drawerBody {
   padding: 16px 18px;
   overflow-y: auto;
@@ -509,13 +470,14 @@ details[open] .extra-title { margin-bottom: 10px; color: var(--text); }
 }
 
 /* Scrollbar in drawer */
-.drawerBody::-webkit-scrollbar { width: 5px; }
+.drawerBody::-webkit-scrollbar       { width: 5px; }
 .drawerBody::-webkit-scrollbar-track { background: transparent; }
 .drawerBody::-webkit-scrollbar-thumb {
   background: var(--line2);
   border-radius: 999px;
 }
 
+/* ── imgBox ──────────────────────────────────────────────── */
 .imgBox {
   border: 1px solid var(--line2);
   border-radius: 14px;
@@ -529,6 +491,68 @@ details[open] .extra-title { margin-bottom: 10px; color: var(--text); }
 }
 .imgBox img { width: 100%; height: auto; display: block; }
 
+/* ── FIX #5: Carousel CSS (was volledig afwezig) ─────────── */
+.carousel {
+  position: relative;
+  width: 100%;
+  background: #080e09;
+  border-radius: 14px;
+  overflow: hidden;
+  /* min-height zodat knoppen zichtbaar zijn ook zonder afbeelding */
+  min-height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.carouselMain {
+  width: 100%;
+  height: auto;
+  display: block;
+  max-height: 340px;
+  object-fit: contain;
+  border-radius: 14px;
+}
+.carouselBtn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(9,13,11,.75);
+  border: 1px solid var(--line2);
+  color: var(--text);
+  font-size: 22px;
+  line-height: 1;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background .15s, border-color .15s;
+  /* Zorg dat knoppen BOVEN afbeelding staan */
+  z-index: 2;
+}
+.carouselBtn:hover {
+  background: rgba(200,168,75,.2);
+  border-color: var(--accent);
+}
+.carouselBtn.prev { left: 10px; }
+.carouselBtn.next { right: 10px; }
+.carouselCounter {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(9,13,11,.7);
+  color: var(--muted);
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line2);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* ── kv (key-value blok in drawer) ──────────────────────── */
 .kv {
   margin-top: 14px;
   border: 1px solid var(--line2);
@@ -554,6 +578,7 @@ details[open] .extra-title { margin-bottom: 10px; color: var(--text); }
 }
 .kv .v { flex: 1; font-size: 13px; }
 
+/* ── Fyto box ────────────────────────────────────────────── */
 .fytoBox {
   margin-top: 14px;
   border: 1px solid rgba(200,168,75,.3);
@@ -586,7 +611,7 @@ details[open] .extra-title { margin-bottom: 10px; color: var(--text); }
 
 /* ── Misc ────────────────────────────────────────────────── */
 .footnote { color: var(--muted); font-size: 12px; margin-top: 12px; }
-.footer { color: var(--muted); font-size: 12px; padding: 16px 0 32px; }
-.right { display: flex; gap: 10px; align-items: center; }
+.footer   { color: var(--muted); font-size: 12px; padding: 16px 0 32px; }
+.right    { display: flex; gap: 10px; align-items: center; }
 details summary { cursor: pointer; }
 .pad { padding: 8px 2px; }
