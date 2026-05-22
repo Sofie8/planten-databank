@@ -3,106 +3,129 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>PlantenDatabank – mockup</title>
+  <title>Planten Databank</title>
+
+  <!-- styles -->
   <link rel="stylesheet" href="assets/style.css" />
-  <!-- SheetJS (xlsx parser) via CDN -->
-  <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script defer src="assets/app.js"></script>
 </head>
+
 <body>
-  <header class="topbar">
-    <div class="wrap">
-      <div class="brand">
-        <div class="logo">🌿</div>
-        <div>
-          <div class="title">Planten Databank</div>
-          
-        </div>
-      </div>
-      <div class="right"></div>
+  <header class="wrap topbar">
+    <div class="left">
+      <div class="logo" aria-hidden="true">🌿</div>
+      <div class="title">Planten Databank</div>
     </div>
+    <div class="right"></div>
   </header>
 
   <main class="wrap">
+    <!-- FILTERS PANEL -->
     <section class="panel filters">
       <div class="grid">
         <div class="field">
           <label>1) Typologie</label>
+          <!-- v8 ID -->
           <select id="typology"></select>
-          <div class="hint">Eerst kies je de typologie (bv. Bomen, Haagplanten, Wadi…). Daarna pas bodemfilters.</div>
         </div>
 
         <div class="field">
           <label>2) Subtype</label>
+          <!-- v8 ID -->
           <select id="subtype"></select>
-          <div class="hint">Optioneel: verfijn binnen een typologie (bv. laanbomen, fruitbomen, bosgoed…).</div>
         </div>
 
         <div class="field">
           <label>3) Bodemtype</label>
+          <!-- v8 ID -->
           <select id="soilType"></select>
         </div>
 
         <div class="field">
           <label>4) Bodemvochtigheid</label>
+          <!-- v8 ID -->
           <select id="soilMoisture"></select>
         </div>
 
         <div class="field">
           <label>5) Zuurtegraad (pH)</label>
+          <!-- v8 ID -->
           <select id="acidity"></select>
         </div>
 
         <div class="field">
           <label>6) Verspreiding</label>
+          <!-- v8 ID -->
           <select id="spread"></select>
-          <div class="hint">Voorbeeld: inheems, ingeburgerd, aangeplant… (meervoudige waarden toegestaan)</div>
         </div>
       </div>
 
-      <details class="extra" id="extraFiltersBox"><summary class="extra-title">Extra filters</summary><div id="extraFiltersList"></div></details>
+      <!-- Extra filters (collapsible) -->
+      <details class="extra" id="extraFiltersBox">
+        <summary class="extra-title">Extra filters</summary>
+        <div id="extraFiltersList"></div>
+      </details>
 
       <hr />
 
+      <!-- LAYERS -->
       <div class="layers">
-        <div class="layer-title">7) Lagen “painten” (optioneel)</div>
-        <label class="chip"><input type="checkbox" id="layer_klimaat" /> Klimaatbomenlijst</label>
-        <label class="chip"><input type="checkbox" id="layer_amber" /> AMBER-lijst</label>
-        <label class="chip"><input type="checkbox" id="layer_regionaal" /> Regionale soortenlijst</label>
-        <label class="chip"><input type="checkbox" id="layer_bobo" /> BOBO-regio</label>
-        <label class="chip"><input type="checkbox" id="layer_fyto" /> Fytoremediatie</label>
-      </div>
+        <div class="layer-title">Lagen “painten”</div>
 
-      <div class="grid2">
-        <div class="field" id="districtWrap" style="display:none;">
-          <label>Regionale lijst: district</label>
-          <select id="district"></select>
-          <div class="hint">Kies “Alleen tonen” om enkel planten te tonen die in de regionale lijst voorkomen.</div>
-          <div class="inline">
-            <label class="radio"><input type="radio" name="regionMode" id="regionModePaint" value="paint" checked> Labelen</label>
-            <label class="radio"><input type="radio" name="regionMode" id="regionModeFilter" value="filter"> Alleen tonen</label>
+        <div class="chips">
+          <label class="chip"><input type="checkbox" id="layer_klimaat" /> Klimaatbomenlijst</label>
+          <label class="chip"><input type="checkbox" id="layer_amber" /> AMBER-lijst</label>
+
+          <label class="chip">
+            <input type="checkbox" id="layer_regionaal" /> Regionale soortenlijst
+          </label>
+
+          <label class="chip">
+            <input type="checkbox" id="layer_bobo" /> BOBO-regio
+          </label>
+
+          <label class="chip">
+            <input type="checkbox" id="layer_fyto" /> Fytoremediatie
+          </label>
+        </div>
+
+        <!-- Regionaal dropdown + mode -->
+        <div class="grid" style="margin-top:12px;">
+          <div class="field" id="districtWrap" style="display:none;">
+            <label>Regionale lijst: district</label>
+            <select id="district"></select>
+
+            <div class="inline" style="margin-top:10px;">
+              <label class="radio">
+                <input type="radio" name="regionMode" id="regionModePaint" value="paint" checked />
+                Labelen
+              </label>
+              <label class="radio">
+                <input type="radio" name="regionMode" id="regionModeFilter" value="filter" />
+                Alleen tonen
+              </label>
+            </div>
+          </div>
+
+          <!-- BOBO groep -->
+          <div class="field" id="boboWrap" style="display:none;">
+            <label>BOBO: groep</label>
+            <select id="boboGroup"></select>
+          </div>
+
+          <!-- BOBO code -->
+          <div class="field" id="boboCodeWrap" style="display:none;">
+            <label>BOBO: bodemcode</label>
+            <select id="boboCode"></select>
           </div>
         </div>
-        <div class="field" id="boboWrap" style="display:none;">
-  <label>BOBO: groep</label>
-  <select id="boboGroup"></select>
-  <div class="hint">Eerst kies je de lettergroep (A/E/G/L/M/P/S/U/V/Z).</div>
-</div>
-<div class="field" id="boboCodeWrap" style="display:none;">
-  <label>BOBO: bodemcode</label>
-  <select id="boboCode"></select>
-  <div class="hint">Daarna kies je de specifieke code (bv. Aba). Kies “Alle” om enkel op aanwezigheid te filteren.</div>
-</div>
       </div>
     </section>
 
+    <!-- RESULTS -->
     <section class="panel">
-      <div class="results-head">
-        <div>
-          <div class="results-title">Resultaten</div>
-          <div class="results-sub" id="resultsMeta">—</div>
-        </div>
-        <div class="right"></div>
+      <div class="resultsHeader">
+        <div class="resultsMeta" id="resultsMeta">—</div>
+        <button class="btn" id="exportCsv">Export CSV</button>
       </div>
 
       <div class="tableWrap">
@@ -120,54 +143,54 @@
           <tbody></tbody>
         </table>
       </div>
-      <div class="footnote">
-        Tip: voeg later kolommen toe zoals “hoogte”, “licht”, “luchtverontreiniging”, “bestuiving”, … (zelfde patroon).
-      </div>
     </section>
+  </main>
 
-    
-  
-</main>
-<aside class="drawer" id="detailDrawer" aria-hidden="true">
-  <div class="drawerHead">
-    <div>
-      <div class="drawerTitle" id="drawerTitle">Plant</div>
-      <div class="drawerSub" id="drawerSub"></div>
-    </div>
-    <button class="btn ghost" id="drawerClose">Sluiten</button>
-  </div>
-  <div class="drawerBody">
-    <div class="imgBox" id="drawerImages"></div>
-
-    <div class="kv">
-      <div class="kvRow"><div class="k">Bodem</div><div class="v" id="drawerSoil">—</div></div>
-      <div class="kvRow"><div class="k">Vocht</div><div class="v" id="drawerMoist">—</div></div>
-      <div class="kvRow"><div class="k">pH</div><div class="v" id="drawerPh">—</div></div>
-      <div class="kvRow"><div class="k">Verspreiding</div><div class="v" id="drawerSpread">—</div></div>
+  <!-- RIGHT DRAWER (required by v10/v11 app.js) -->
+  <aside class="drawer" id="detailDrawer" aria-hidden="true">
+    <div class="drawerHead">
+      <div>
+        <div class="drawerTitle" id="drawerTitle">Plant</div>
+        <div class="drawerSub" id="drawerSub"></div>
+      </div>
+      <button class="btn ghost" id="drawerClose">Sluiten</button>
     </div>
 
-    <div class="fytoBox" id="drawerFyto" style="display:none;">
-      <div class="fytoTitle">Fytoremediatie</div>
+    <div class="drawerBody">
+      <div class="imgBox" id="drawerImages"></div>
 
-      <div class="fytoField">
-        <div class="k">Comments on phytoremedial effectiveness</div>
-        <div class="v" id="fytoComments">—</div>
+      <div class="kv">
+        <div class="kvRow"><div class="k">Bodem</div><div class="v" id="drawerSoil">—</div></div>
+        <div class="kvRow"><div class="k">Vocht</div><div class="v" id="drawerMoist">—</div></div>
+        <div class="kvRow"><div class="k">pH</div><div class="v" id="drawerPh">—</div></div>
+        <div class="kvRow"><div class="k">Verspreiding</div><div class="v" id="drawerSpread">—</div></div>
       </div>
 
-      <div class="fytoField">
-        <div class="k">Continent-Country-City-Site</div>
-        <div class="v" id="fytoSite">—</div>
-      </div>
+      <div class="fytoBox" id="drawerFyto" style="display:none;">
+        <div class="fytoTitle">Fytoremediatie</div>
 
-      <div class="fytoField">
-        <div class="k">Reference (author, year, doi)</div>
-        <div class="v" id="fytoRef">—</div>
+        <div class="fytoField">
+          <div class="k">Comments on phytoremedial effectiveness</div>
+          <div class="v" id="fytoComments">—</div>
+        </div>
+
+        <div class="fytoField">
+          <div class="k">Continent-Country-City-Site</div>
+          <div class="v" id="fytoSite">—</div>
+        </div>
+
+        <div class="fytoField">
+          <div class="k">Reference (author, year, doi)</div>
+          <div class="v" id="fytoRef">—</div>
+        </div>
       </div>
     </div>
-  </div>
-</aside>
+  </aside>
 
+  <!-- XLSX lib (required) -->
+  <script src="assets/xlsx.full.min.js"></script>
 
-  <footer class="wrap footer"></footer>
+  <!-- your app -->
+  <script src="assets/app.js"></script>
 </body>
 </html>
