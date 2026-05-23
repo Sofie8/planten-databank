@@ -1,107 +1,96 @@
 {
   "typologies": {
     "1.Bomen": {
-      "label": "Bomen",
       "subtypes": {
-        "Alle bomen (Ecoflora)": [
-          "ecoflora_bomen"
-        ],
-        "Bosgoed": [
+        "bosgoed": [
           "ecoflora_bosgoed"
         ],
-        "Fruitbomen": [
+        "fruitbomen": [
           "ecoflora_fruitbomen"
         ],
-        "Laanbomen": [
+        "laanbomen": [
           "ecoflora_laanbomen"
         ],
-        "Solitaire bomen": [
+        "solitaire_bomen": [
           "ecoflora_solitaire_bomen"
         ]
       }
     },
     "2.Haagplanten": {
-      "label": "Haagplanten",
       "subtypes": {
-        "Haagplanten": [
+        "haagplanten": [
           "ecoflora_haagplanten"
         ],
-        "Haagpakketten": [
+        "haagpakketten": [
           "ecoflora_haagpakketten"
         ]
       }
     },
     "3.wadi": {
-      "label": "Wadi / vijver",
       "subtypes": {
-        "Waterplanten (Ecoflora)": [
+        "waterplanten": [
           "Ecoflora_waterplanten"
         ]
       }
     },
     "4.bloemenweide": {
-      "label": "Bloemen & zaden",
       "subtypes": {
-        "Bloembollen": [
+        "bloembollen": [
           "ecoflora_bloembollen"
         ],
-        "Bloemenweide": [
+        "bloemenweide": [
           "ecoflora_bloemenweides"
         ],
-        "Rozen": [
+        "rozen": [
           "ecoflora_rozen"
         ],
-        "Zaden bloemen": [
+        "zaden_bloemen": [
           "ecoflora_zaden_bloemen"
         ]
       }
     },
     "5.inheemse_planten": {
-      "label": "Inheemse planten",
       "subtypes": {
-        "Borders": [
+        "borders": [
           "ecoflora_borders"
         ],
-        "Grassen": [
+        "grassen": [
           "ecoflora_grassen"
         ],
-        "Varens": [
+        "varens": [
           "Ecoflora_varens"
         ],
-        "Wilde planten": [
+        "wilde_planten": [
           "ecoflora_wilde_planten"
         ]
       }
     },
     "6.gevelgroen": {
-      "label": "Gevelgroen",
       "subtypes": {
-        "Klimplanten (Ecoflora)": [
+        "klimplanten": [
           "ecoflora_klimplanten"
         ]
       }
     },
     "7.grasland_weide": {
-      "label": "Grasland / weide",
       "subtypes": {
-        "Begrazingsmengsels": [
+        "begrazingsmengsels": [
           "ecoflora_begrazingsmengsels"
         ],
-        "Groenbedekker (groenbemesters)": [
+        "groenbemesters": [
           "ecoflora_groenbemesters"
         ]
       }
     },
     "9.fruit_groenten_kruiden": {
-      "label": "Fruit, groenten, kruiden",
       "subtypes": {
-        "Kleinfruit": [
+        "kleinfruit": [
           "ecoflora_kleinfruit"
         ],
-        "Kruiden": [
+        "kruiden": [
           "ecoflora_kruiden"
         ],
-        "Zadenpakketten": [
+        "zadenpakketten": [
           "ecoflora_zadenpakketten"
         ]
       }
