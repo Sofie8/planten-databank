@@ -62,6 +62,19 @@ async function fetchXlsx(path) {
   const buf = await res.arrayBuffer();
   return XLSX.read(buf, { type: "array" });
 }
+
+
+// ==== PATH ROUTING (robust, based on relative paths stored in config.json) ====
+// Config now stores typology file refs relative to data/typologies/ WITHOUT .xlsx
+// Example: ecoflora/bomen/ecoflora_bosgoed
+function typologyFileToPath(name){
+  return `data/typologies/${name}.xlsx`;
+}
+// Config stores layer file refs relative to data/layers/ WITHOUT .xlsx (and may include subfolders)
+function layerFileToPath(name){
+  return `data/layers/${name}.xlsx`;
+}
+
 function firstSheetName(wb) { return wb.SheetNames[0]; }
 function sheetToJson(wb, sheetName) {
   return XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: "" });
@@ -95,55 +108,36 @@ function subtypeOptions(typology) {
   const subs = node?.subtypes ? Object.keys(node.subtypes) : ["Alle"];
   return subs.length ? subs : ["Alle"];
 }
-// --- Typology folder routing (Ecoflora subfolders) ---
-function typologyFolder(typology){
-  const map = {
-    "1.Bomen": "bomen",
-    "2.Haagplanten": "haagplanten",
-    "3.wadi": "wadi_vijver",
-    "4.bloemenweide": "bloemenweide",
-    "5.inheemse_planten": "inheemse_planten",
-    "6.gevelgroen": "gevelgroen",
-    "7.grasland_weide": "weide",
-    "9.fruit_groenten_kruiden": "fruit-groenten_kruiden"
-  };
-  const group = map[typology] || "overig";
-  return `data/typologies/ecoflora/${group}`;
-}
-
-// OVERRIDE: builds xlsx paths under data/typologies/ecoflora/<typologie-map>/<excel>.xlsx
 function filesForTypology(typology, subtype){
   const node = STATE.config?.typologies?.[typology];
   if(!node) return [];
   const subtypeKeys = Object.keys(node.subtypes || {});
   const chosenSubtype = subtypeKeys.includes(subtype) ? subtype : (subtypeKeys[0] || "Alle");
   const files = node.subtypes?.[chosenSubtype] ?? [];
-  const folder = typologyFolder(typology);
-  return (files ?? []).map(norm).filter(Boolean).map(name => `${folder}/${name}.xlsx`);
+  return (files ?? []).map(norm).filter(Boolean).map(typologyFileToPath);
 }
-
 
 // ── Layers ────────────────────────────────────────────────────────────────────
 function districtToFilename(d) {
   const cleaned = norm(d).replaceAll("/", "_").replaceAll(".", "");
   return cleaned.split(" ").join("_") + ".xlsx";
 }
-function layerFiles(layerKey, typology) {
-  if (layerKey === "regionaal") {
-    if (!STATE.selected.district) return [];
-    return [`data/layers/${districtToFilename(STATE.selected.district)}`];
+function layerFiles(layerKey, typology){
+  if(layerKey==="regionaal"){
+    if(!STATE.selected.district) return [];
+    return [layerFileToPath(`regionale_soortenlijst/${districtToFilename(STATE.selected.district).replace(/\.xlsx$/i,"")}`)];
   }
-  if (layerKey === "bobo") {
-    if (!STATE.selected.boboGroup) return [];
-    return [`data/layers/BOBO_${STATE.selected.boboGroup}.xlsx`];
+  if(layerKey==="bobo"){
+    if(!STATE.selected.boboGroup) return [];
+    return [layerFileToPath(`bobo_regio/BOBO_${STATE.selected.boboGroup}`)];
   }
-  if (layerKey === "fyto") {
+  if(layerKey==="fyto"){
     const names = (STATE.config?.layers?.fytoremediatie?.[typology] ?? []).map(norm).filter(Boolean);
-    return names.map(n => `data/layers/${n}.xlsx`);
+    return names.map(layerFileToPath);
   }
-  const keyMap = { klimaat: "klimaatbomenlijst", amber: "amberlijst" };
+  const keyMap = { klimaat:"klimaatbomenlijst", amber:"amberlijst" };
   const names = (STATE.config?.layers?.[keyMap[layerKey]] ?? []).map(norm).filter(Boolean);
-  return names.map(n => `data/layers/${n}.xlsx`);
+  return names.map(layerFileToPath);
 }
 
 // ── Row parsers ───────────────────────────────────────────────────────────────
@@ -740,7 +734,7 @@ function renderExtraFilters(plants) {
 // ── Options loaders ───────────────────────────────────────────────────────────
 async function loadBoboOptions() {
   try {
-    const wb = await fetchXlsx("data/layers/bobo_bodemcodes_volledige_lijst.xlsx");
+    const wb = await fetchXlsx("data/layers/bobo_regio/bobo_bodemcodes_volledige_lijst.xlsx");
     const sheet = wb.Sheets["alle_codes"] ? "alle_codes" : firstSheetName(wb);
     const rows = sheetToJson(wb, sheet);
 
@@ -761,7 +755,7 @@ async function loadBoboOptions() {
 
 async function loadRegionOptions() {
   try {
-    const wb = await fetchXlsx("data/layers/List_options_regionale_soortenlijst.xlsx");
+    const wb = await fetchXlsx("data/layers/regionale_soortenlijst/List_options_regionale_soortenlijst.xlsx");
     const rows = sheetToJson(wb, firstSheetName(wb));
     const districts = rows.map(r => norm(r["Districten"] || r["districten"])).filter(Boolean);
     STATE.options.region.districts = uniqSorted(districts);
