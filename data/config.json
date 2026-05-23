@@ -3,111 +3,111 @@
     "1.Bomen": {
       "subtypes": {
         "bosgoed": [
-          "ecoflora_bosgoed"
+          "ecoflora/bomen/ecoflora_bosgoed"
         ],
         "fruitbomen": [
-          "ecoflora_fruitbomen"
+          "ecoflora/bomen/ecoflora_fruitbomen"
         ],
         "laanbomen": [
-          "ecoflora_laanbomen"
+          "ecoflora/bomen/ecoflora_laanbomen"
         ],
         "solitaire_bomen": [
-          "ecoflora_solitaire_bomen"
+          "ecoflora/bomen/ecoflora_solitaire_bomen"
         ]
       }
     },
     "2.Haagplanten": {
       "subtypes": {
         "haagplanten": [
-          "ecoflora_haagplanten"
+          "ecoflora/haagplanten/ecoflora_haagplanten"
         ],
         "haagpakketten": [
-          "ecoflora_haagpakketten"
+          "ecoflora/haagplanten/ecoflora_haagpakketten"
         ]
       }
     },
     "3.wadi": {
       "subtypes": {
         "waterplanten": [
-          "Ecoflora_waterplanten"
+          "ecoflora/wadi_vijver/Ecoflora_waterplanten"
         ]
       }
     },
     "4.bloemenweide": {
       "subtypes": {
         "bloembollen": [
-          "ecoflora_bloembollen"
+          "ecoflora/bloemenweide/ecoflora_bloembollen"
         ],
         "bloemenweide": [
-          "ecoflora_bloemenweides"
+          "ecoflora/bloemenweide/ecoflora_bloemenweides"
         ],
         "rozen": [
-          "ecoflora_rozen"
+          "ecoflora/bloemenweide/ecoflora_rozen"
         ],
         "zaden_bloemen": [
-          "ecoflora_zaden_bloemen"
+          "ecoflora/bloemenweide/ecoflora_zaden_bloemen"
         ]
       }
     },
     "5.inheemse_planten": {
       "subtypes": {
         "borders": [
-          "ecoflora_borders"
+          "ecoflora/inheemse_planten/ecoflora_borders"
         ],
         "grassen": [
-          "ecoflora_grassen"
+          "ecoflora/inheemse_planten/ecoflora_grassen"
         ],
         "varens": [
-          "Ecoflora_varens"
+          "ecoflora/inheemse_planten/Ecoflora_varens"
         ],
         "wilde_planten": [
-          "ecoflora_wilde_planten"
+          "ecoflora/inheemse_planten/ecoflora_wilde_planten"
         ]
       }
     },
     "6.gevelgroen": {
       "subtypes": {
         "klimplanten": [
-          "ecoflora_klimplanten"
+          "ecoflora/gevelgroen/ecoflora_klimplanten"
         ]
       }
     },
     "7.grasland_weide": {
       "subtypes": {
         "begrazingsmengsels": [
-          "ecoflora_begrazingsmengsels"
+          "ecoflora/weide/ecoflora_begrazingsmengsels"
         ],
         "groenbemesters": [
-          "ecoflora_groenbemesters"
+          "ecoflora/weide/ecoflora_groenbemesters"
         ]
       }
     },
     "9.fruit_groenten_kruiden": {
       "subtypes": {
         "kleinfruit": [
-          "ecoflora_kleinfruit"
+          "ecoflora/fruit-groenten_kruiden/ecoflora_kleinfruit"
         ],
         "kruiden": [
-          "ecoflora_kruiden"
+          "ecoflora/fruit-groenten_kruiden/ecoflora_kruiden"
         ],
         "zadenpakketten": [
-          "ecoflora_zadenpakketten"
+          "ecoflora/fruit-groenten_kruiden/ecoflora_zadenpakketten"
         ]
       }
     }
   },
   "layers": {
     "klimaatbomenlijst": [
-      "Klimaatbomen_amber"
+      "klimaatbomen/Klimaatbomen_amber"
     ],
     "amberlijst": [
-      "Amber_bomen",
-      "Amber_heesters",
-      "Amber_klimplanten",
-      "Amber_lage_bodembedekkers_3060",
-      "Amber_zeerlage_bodembedekkers_530",
-      "Amber_streekeigen_inheemse_vasteplanten",
-      "Amber_Oost-Kempisch_puinwaaierdistrict"
+      "amber/Amber_bomen",
+      "amber/Amber_heesters",
+      "amber/Amber_klimplanten",
+      "amber/Amber_lage_bodembedekkers_3060",
+      "amber/Amber_zeerlage_bodembedekkers_530",
+      "amber/Amber_streekeigen_inheemse_vasteplanten",
+      "amber/Amber_Oost-Kempisch_puinwaaierdistrict"
     ],
     "regionale_soortenlijst": [
       "Regionale_soortenlijst_Oost-Kempisch puinwaaierdistrict"
@@ -117,28 +117,28 @@
     ],
     "fytoremediatie": {
       "1.Bomen": [
-        "Fytoremediatie_bomen"
+        "fytoremediatie/Fytoremediatie_bomen"
       ],
       "2.Haagplanten": [
-        "Fytoremediatie_haagplanten"
+        "fytoremediatie/Fytoremediatie_haagplanten"
       ],
       "3.wadi": [
-        "Fytoremediatie_wadi"
+        "fytoremediatie/Fytoremediatie_wadi"
       ],
       "4.bloemenweide": [
-        "Fytoremediatie_bloemenweide"
+        "fytoremediatie/Fytoremediatie_bloemenweide"
       ],
       "5.inheemse_planten": [
-        "Fytoremediatie_inheemse_planten"
+        "fytoremediatie/Fytoremediatie_inheemse_planten"
       ],
       "6.gevelgroen": [
-        "Fytoremediatie_gevelgroen"
+        "fytoremediatie/Fytoremediatie_gevelgroen"
       ],
       "7.grasland_weide": [
-        "Fytoremediatie_weide"
+        "fytoremediatie/Fytoremediatie_weide"
       ],
       "9.fruit_groenten_kruiden": [
-        "Fytoremediatie_fruit_groenten_kruiden"
+        "fytoremediatie/Fytoremediatie_fruit_groenten_kruiden"
       ]
     }
   }
