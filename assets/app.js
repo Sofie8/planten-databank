@@ -13,16 +13,6 @@ const $ = (sel) => document.querySelector(sel);
 // Verwacht: https://...r2.dev/images/<foto_id>.jpg
 const IMAGE_BASE_URL = "https://pub-bb204453b9b642598d8514f7ac4f68be.r2.dev/images";
 
-
-// Folderstructuur voor data/layers
-const LAYER_DIRS = {
-  klimaat: "data/layers/klimaatbomen",
-  amber: "data/layers/amber",
-  regionaal: "data/layers/regionale_soortenlijst",
-  bobo: "data/layers/bobo_regio",
-  fyto: "data/layers/fytoremediatie",
-  fyto_detail: "data/layers/fytoremediatie/detail"
-};
 const STATE = {
   config: null,
   plants: [],
@@ -105,13 +95,33 @@ function subtypeOptions(typology) {
   const subs = node?.subtypes ? Object.keys(node.subtypes) : ["Alle"];
   return subs.length ? subs : ["Alle"];
 }
-function filesForTypology(typology, subtype) {
-  const node = STATE.config?.typologies?.[typology];
-  if (!node) return [];
-  const subtypeKeys = Object.keys(node.subtypes || {});
-  const sub = node.subtypes?.[subtype] ?? node.subtypes?.[subtypeKeys[0]] ?? [];
-  return (sub ?? []).map(norm).filter(Boolean).map(n => `data/typologies/${n}.xlsx`);
+// --- Typology folder routing (Ecoflora subfolders) ---
+function typologyFolder(typology){
+  const map = {
+    "1.Bomen": "bomen",
+    "2.Haagplanten": "haagplanten",
+    "3.wadi": "wadi_vijver",
+    "4.bloemenweide": "bloemenweide",
+    "5.inheemse_planten": "inheemse_planten",
+    "6.gevelgroen": "gevelgroen",
+    "7.grasland_weide": "weide",
+    "9.fruit_groenten_kruiden": "fruit-groenten_kruiden"
+  };
+  const group = map[typology] || "overig";
+  return `data/typologies/ecoflora/${group}`;
 }
+
+// OVERRIDE: builds xlsx paths under data/typologies/ecoflora/<typologie-map>/<excel>.xlsx
+function filesForTypology(typology, subtype){
+  const node = STATE.config?.typologies?.[typology];
+  if(!node) return [];
+  const subtypeKeys = Object.keys(node.subtypes || {});
+  const chosenSubtype = subtypeKeys.includes(subtype) ? subtype : (subtypeKeys[0] || "Alle");
+  const files = node.subtypes?.[chosenSubtype] ?? [];
+  const folder = typologyFolder(typology);
+  return (files ?? []).map(norm).filter(Boolean).map(name => `${folder}/${name}.xlsx`);
+}
+
 
 // ── Layers ────────────────────────────────────────────────────────────────────
 function districtToFilename(d) {
@@ -121,21 +131,19 @@ function districtToFilename(d) {
 function layerFiles(layerKey, typology) {
   if (layerKey === "regionaal") {
     if (!STATE.selected.district) return [];
-    return [`${LAYER_DIRS.regionaal}/${districtToFilename(STATE.selected.district)}`];
+    return [`data/layers/${districtToFilename(STATE.selected.district)}`];
   }
   if (layerKey === "bobo") {
     if (!STATE.selected.boboGroup) return [];
-    return [`${LAYER_DIRS.bobo}/BOBO_${STATE.selected.boboGroup}.xlsx`];
+    return [`data/layers/BOBO_${STATE.selected.boboGroup}.xlsx`];
   }
   if (layerKey === "fyto") {
     const names = (STATE.config?.layers?.fytoremediatie?.[typology] ?? []).map(norm).filter(Boolean);
-    return names.map(n => `${LAYER_DIRS.fyto}/${n}.xlsx`);
+    return names.map(n => `data/layers/${n}.xlsx`);
   }
-
   const keyMap = { klimaat: "klimaatbomenlijst", amber: "amberlijst" };
-  const dirMap = { klimaat: LAYER_DIRS.klimaat, amber: LAYER_DIRS.amber };
-  const list = (STATE.config?.layers?.[keyMap[layerKey]] ?? []).map(norm).filter(Boolean);
-  return list.map(n => `${dirMap[layerKey]}/${n}.xlsx`);
+  const names = (STATE.config?.layers?.[keyMap[layerKey]] ?? []).map(norm).filter(Boolean);
+  return names.map(n => `data/layers/${n}.xlsx`);
 }
 
 // ── Row parsers ───────────────────────────────────────────────────────────────
@@ -732,7 +740,7 @@ function renderExtraFilters(plants) {
 // ── Options loaders ───────────────────────────────────────────────────────────
 async function loadBoboOptions() {
   try {
-    const wb = await fetchXlsx(`${LAYER_DIRS.bobo}/bobo_bodemcodes_volledige_lijst.xlsx`);
+    const wb = await fetchXlsx("data/layers/bobo_bodemcodes_volledige_lijst.xlsx");
     const sheet = wb.Sheets["alle_codes"] ? "alle_codes" : firstSheetName(wb);
     const rows = sheetToJson(wb, sheet);
 
@@ -753,7 +761,7 @@ async function loadBoboOptions() {
 
 async function loadRegionOptions() {
   try {
-    const wb = await fetchXlsx(`${LAYER_DIRS.regionaal}/List_options_regionale_soortenlijst.xlsx`);
+    const wb = await fetchXlsx("data/layers/List_options_regionale_soortenlijst.xlsx");
     const rows = sheetToJson(wb, firstSheetName(wb));
     const districts = rows.map(r => norm(r["Districten"] || r["districten"])).filter(Boolean);
     STATE.options.region.districts = uniqSorted(districts);
@@ -930,49 +938,3 @@ async function init() {
 }
 
 window.addEventListener("DOMContentLoaded", init);
-
-
-// --- Added for ecoflora typology subfolders ---
-function layerFiles(layerKey, typology) {
-  if (layerKey === "regionaal") {
-    if (!STATE.selected.district) return [];
-    return [`${LAYER_DIRS.regionaal}/${districtToFilename(STATE.selected.district)}`];
-  }
-  if (layerKey === "bobo") {
-    if (!STATE.selected.boboGroup) return [];
-    return [`${LAYER_DIRS.bobo}/BOBO_${STATE.selected.boboGroup}.xlsx`];
-  }
-  if (layerKey === "fyto") {
-    const names = (STATE.config?.layers?.fytoremediatie?.[typology] ?? []).map(norm).filter(Boolean);
-    return names.map(n => `${LAYER_DIRS.fyto}/${n}.xlsx`);
-  }
-
-  const keyMap = { klimaat: "klimaatbomenlijst", amber: "amberlijst" };
-  const dirMap = { klimaat: LAYER_DIRS.klimaat, amber: LAYER_DIRS.amber };
-  const list = (STATE.config?.layers?.[keyMap[layerKey]] ?? []).map(norm).filter(Boolean);
-  return list.map(n => `${dirMap[layerKey]}/${n}.xlsx`);
-}
-
-
-
-// override typologyFolder/filesForTypology (no subtype folder)
-function layerFiles(layerKey, typology) {
-  if (layerKey === "regionaal") {
-    if (!STATE.selected.district) return [];
-    return [`${LAYER_DIRS.regionaal}/${districtToFilename(STATE.selected.district)}`];
-  }
-  if (layerKey === "bobo") {
-    if (!STATE.selected.boboGroup) return [];
-    return [`${LAYER_DIRS.bobo}/BOBO_${STATE.selected.boboGroup}.xlsx`];
-  }
-  if (layerKey === "fyto") {
-    const names = (STATE.config?.layers?.fytoremediatie?.[typology] ?? []).map(norm).filter(Boolean);
-    return names.map(n => `${LAYER_DIRS.fyto}/${n}.xlsx`);
-  }
-
-  const keyMap = { klimaat: "klimaatbomenlijst", amber: "amberlijst" };
-  const dirMap = { klimaat: LAYER_DIRS.klimaat, amber: LAYER_DIRS.amber };
-  const list = (STATE.config?.layers?.[keyMap[layerKey]] ?? []).map(norm).filter(Boolean);
-  return list.map(n => `${dirMap[layerKey]}/${n}.xlsx`);
-}
-
