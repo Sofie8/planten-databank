@@ -19,7 +19,7 @@ const IMAGE_BASE_URL = "https://pub-bb204453b9b642598d8514f7ac4f68be.r2.dev/imag
 const STATE = {
   config: null,
   plants: [],
-  loaded: { typologies: new Map(), layers: new Map(), fytoDetail: new Map() },
+  loaded: { typologies: new Map(), layers: new Map() },
   options: {
     bobo: { groups: [], codesByGroup: new Map() },
     region: { districts: [] }
@@ -41,6 +41,7 @@ const STATE = {
     fytoMedium: "bodemwater",
   },
   table: { extraCols: [] },
+  fytoDetailCache: new Map(),
 };
 
 // ── Utility functions ────────────────────────────────────────────────────────
@@ -86,20 +87,6 @@ function layerFileToPath(name) {
 }
 
 function firstSheetName(wb) { return wb.SheetNames[0]; }
-function pickSheetWithHeaders(wb, wantedLower){
-  // wantedLower: array of lowercase header strings
-  try{
-    for(const name of wb.SheetNames){
-      const ws = wb.Sheets[name];
-      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
-      if(!rows || !rows.length) continue;
-      const header = rows[0].map(h => norm(h).toLowerCase());
-      if(header.some(h => wantedLower.includes(h))) return name;
-    }
-  }catch(e){}
-  return wb.SheetNames[0];
-}
-
 
 function pickFytoSheetName(wb) {
   const pol = (STATE.selected.fytoPollutant || "PFAS").toString();
@@ -199,8 +186,6 @@ function rowLatin(row) {
     row["latijnse naam"] ||
     row["LatijnseNaam"] ||
     row["latin"] ||
-    row["Soort"] ||
-    row["soort"] ||
     ""
   );
 }
@@ -267,8 +252,7 @@ async function loadTypologyPlants(typology, subtype) {
       continue;
     }
     const wb = await fetchXlsx(file);
-    const sheet = pickSheetWithHeaders(wb, ["latijnse naam","nederlandse naam","latijns","wetenschappelijke naam","soort"]);
-    const rows = sheetToJson(wb, sheet);
+    const rows = sheetToJson(wb, firstSheetName(wb));
     const plants = rows.map(plantFromRow).filter(p => p.latin);
     STATE.loaded.typologies.set(file, plants);
     all.push(...plants);
@@ -303,8 +287,7 @@ async function loadLayerIndex(files) {
       continue;
     }
     const wb = await fetchXlsx(file);
-    const sheet = pickSheetWithHeaders(wb, ["latijnse naam","nederlandse naam","latijns","wetenschappelijke naam","soort"]);
-    const rows = sheetToJson(wb, sheet);
+    const rows = sheetToJson(wb, firstSheetName(wb));
     const map = new Map();
     for (const r of rows) {
       const latin = rowLatin(r);
@@ -475,10 +458,6 @@ function buildFytoColumns() {
     {
       label: "Reference (author, year, doi)",
       getter: (p) => pickAny(p.fytoRow, ["Reference (author, year, doi)", "Reference (author, year)", "Reference"])
-    },
-    {
-      label: "Extractor / Excluder",
-      getter: (p) => pickAny(p.fytoRow, ["Extractor / Excluder","Extractor/Excluder","extractor_excluder","Extractor","Excluder"])
     },
   ];
 }
@@ -666,129 +645,49 @@ async function resolveFotoUrls(fotoIds, max = 80) {
   return out;
 }
 
-// ── Drawer ───────────────────────────────────────────────────────────────────
 
-
-function getFytoBaseNameForTypology(typology){
-  // takes first configured fyto summary file and uses its basename (no folders)
-  const arr = (STATE.config?.layers?.fytoremediatie?.[typology] ?? []);
-  const first = Array.isArray(arr) ? arr[0] : "";
-  const s = norm(first);
-  if(!s) return "";
-  const parts = s.split("/");
-  return parts[parts.length-1]; // e.g. Fytoremediatie_bomen
+// ── Fyto detail helpers ───────────────────────────────────────────────────────
+function fytoBaseNameForTypology(typology){
+  // config.layers.fytoremediatie[typology] is array of relative refs, take first and strip folder
+  const arr = STATE.config?.layers?.fytoremediatie?.[typology] || [];
+  const first = Array.isArray(arr) ? (arr[0] || "") : "";
+  const ref = norm(first);
+  const last = ref.split("/").pop(); // e.g. Fytoremediatie_bomen
+  return last || "Fytoremediatie";
 }
 
-function fytoDetailCandidates(typology){
-  const base = getFytoBaseNameForTypology(typology);
-  if(!base) return [];
+function buildFytoDetailPath(typology){
+  const base = fytoBaseNameForTypology(typology);
   const med = (STATE.selected.fytoMedium || "bodemwater").toString();
   const pol = (STATE.selected.fytoPollutant || "PFAS").toString();
-  const vars = [];
-  const polVars = Array.from(new Set([pol, pol.toUpperCase(), pol.toLowerCase(), pol[0].toUpperCase()+pol.slice(1).toLowerCase()]));
-  for(const pv of polVars){
-    vars.push(`data/layers/fytoremediatie/detail/${base}_${med}_${pv}_detail.xlsx`);
-    vars.push(`data/layers/fytoremediatie/detail/${base}_${med}_${pv}.xlsx`); // fallback if no _detail suffix
-  }
-  return vars;
+  // detail files are expected under: data/layers/fytoremediatie/detail/<base>_<med>_<pol>_detail.xlsx
+  return `data/layers/fytoremediatie/detail/${base}_${med}_${pol}_detail.xlsx`;
 }
 
-async function loadFytoDetailRowsForPlant(plant){
-  const typ = STATE.selected.typology;
-  const key = `${typ}|${STATE.selected.fytoMedium}|${STATE.selected.fytoPollutant}|${plant.latin}|${plant.dutch}`;
-  if(STATE.loaded.fytoDetail.has(key)) return STATE.loaded.fytoDetail.get(key);
-
-  const candidates = fytoDetailCandidates(typ);
-  let wb = null;
-  let usedPath = null;
-  for(const path of candidates){
-    try{
-      wb = await fetchXlsx(path);
-      usedPath = path;
-      break;
-    }catch(e){}
-  }
-  if(!wb){
-    const empty = { usedPath:null, rows:[] };
-    STATE.loaded.fytoDetail.set(key, empty);
-    return empty;
-  }
-  const sheet = pickSheetWithHeaders(wb, ["latijnse naam","nederlandse naam"]);
-  const rows = sheetToJson(wb, sheet);
-
-  const latin = keyLatin(plant.latin);
-  const dutch = plant.dutch ? norm(plant.dutch).toLowerCase() : "";
-  const hits = rows.filter(r=>{
-    const rl = keyLatin(rowLatin(r));
-    const rn = norm(rowDutch(r)).toLowerCase();
-    return (rl && rl===latin) || (dutch && rn===dutch);
-  });
-
-  const result = { usedPath, rows: hits };
-  STATE.loaded.fytoDetail.set(key, result);
-  return result;
+function stringifyRow(row){
+  return Object.values(row).map(v => norm(v)).join(" ").toLowerCase();
 }
 
-function renderFytoDetailTable(rows, searchTerm){
-  const host = $("#fytoDetailTable");
-  if(!host) return;
-  const term = norm(searchTerm).toLowerCase();
-  const filtered = term ? rows.filter(r => Object.values(r).some(v => norm(v).toLowerCase().includes(term))) : rows;
-
-  const keys = filtered.length ? Object.keys(filtered[0]) : (rows.length ? Object.keys(rows[0]) : []);
-  if(!keys.length){
-    host.innerHTML = `<div class="hint">Geen detail-rijen gevonden.</div>`;
-    return;
-  }
-  const thead = `<thead><tr>${keys.map(k=>`<th>${k}</th>`).join("")}</tr></thead>`;
-  const tbody = `<tbody>${filtered.map(r=>`<tr>${keys.map(k=>`<td>${norm(r[k])||"—"}</td>`).join("")}</tr>`).join("")}</tbody>`;
-  host.innerHTML = `<table class="detailTable">${thead}${tbody}</table>`;
-  $("#fytoDetailMeta") && ($("#fytoDetailMeta").textContent = `${filtered.length} / ${rows.length} rijen`);
-}
-
-function csvFromObjects(rows){
+function rowsToCsv(rows){
   if(!rows || !rows.length) return "";
-  const keys = Object.keys(rows[0]);
+  const headers = Object.keys(rows[0]);
   const esc=(v)=>`"${String(v??"").replaceAll('"','""')}"`;
   return [
-    keys.map(esc).join(","),
-    ...rows.map(r=> keys.map(k=>esc(r[k])).join(","))
-  ].join("\n");
+    headers.map(esc).join(","),
+    ...rows.map(r => headers.map(h => esc(r[h])).join(","))
+  ].join("\\n");
 }
 
-function extendedCsvForPlant(plant, detailRows){
-  // one file with two sections: ecoflora/raw + fyto summary + detail
-  const esc=(v)=>`"${String(v??"").replaceAll('"','""')}"`;
-  const raw = plant.raw || {};
-  const rawKeys = Object.keys(raw);
-  const summaryKeys = ["Latijnse naam","Nederlandse naam","Lagen","BOBO code","Fyto contaminant","Fyto medium","Fyto comments","Fyto site","Fyto reference","Fyto extractor/excluder"];
-  const summaryRow = {
-    "Latijnse naam": plant.latin,
-    "Nederlandse naam": plant.dutch,
-    "Lagen": badgesForPlant(plant).join("|"),
-    "BOBO code": plant.boboCode || "",
-    "Fyto contaminant": STATE.selected.fytoPollutant,
-    "Fyto medium": STATE.selected.fytoMedium,
-    "Fyto comments": pickAny(plant.fytoRow, ["Comments on phytoremedial effectiveness"]),
-    "Fyto site": pickAny(plant.fytoRow, ["Continent-Country-City-Site"]),
-    "Fyto reference": pickAny(plant.fytoRow, ["Reference (author, year, doi)","Reference (author, year)","Reference"]),
-    "Fyto extractor/excluder": pickAny(plant.fytoRow, ["Extractor / Excluder","Extractor/Excluder","extractor_excluder","Extractor","Excluder"])
-  };
-
-  let out = "ECOFLORA_RAW\n";
-  out += rawKeys.map(esc).join(",") + "\n";
-  out += rawKeys.map(k=>esc(raw[k])).join(",") + "\n\n";
-  out += "SUMMARY\n";
-  out += summaryKeys.map(esc).join(",") + "\n";
-  out += summaryKeys.map(k=>esc(summaryRow[k])).join(",") + "\n\n";
-  out += "FYTO_DETAIL\n";
-  if(detailRows && detailRows.length){
-    out += csvFromObjects(detailRows);
-  }else{
-    out += "Geen detail data";
-  }
-  return out;
+function downloadText(filename,text){
+  const blob=new Blob([text],{type:"text/plain;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download=filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),250);
 }
+
+
+// ── Drawer ───────────────────────────────────────────────────────────────────
 
 function openDrawer(plant) {
   const drawer = $("#detailDrawer");
@@ -807,16 +706,145 @@ function openDrawer(plant) {
     $("#fytoComments").textContent = pickAny(plant.fytoRow, ["Comments on phytoremedial effectiveness"]) || "—";
     $("#fytoSite").textContent = pickAny(plant.fytoRow, ["Continent-Country-City-Site"]) || "—";
     $("#fytoRef").textContent = pickAny(plant.fytoRow, ["Reference (author, year, doi)", "Reference (author, year)", "Reference"]) || "—";
-    const ex = pickAny(plant.fytoRow, ["Extractor / Excluder","Extractor/Excluder","extractor_excluder","Extractor","Excluder"]);
-    if($("#fytoEx")) $("#fytoEx").textContent = ex || "—";
-    if($("#fytoMoreBtn")) $("#fytoMoreBtn").style.display = "inline-flex";
-    if($("#fytoDetailWrap")) $("#fytoDetailWrap").style.display = "none";
-    if($("#fytoDetailSearch")) $("#fytoDetailSearch").value = "";
   } else {
     fytoBox.style.display = "none";
-    if($("#fytoMoreBtn")) $("#fytoMoreBtn").style.display = "none";
-    if($("#fytoDetailWrap")) $("#fytoDetailWrap").style.display = "none";
   }
+
+
+    // wire "Meer details" (fytoremediatie detail)
+    const moreBtn = $("#fytoMoreBtn");
+    const detailBox = $("#fytoDetailBox");
+    const detailMeta = $("#fytoDetailMeta");
+    const detailSearch = $("#fytoDetailSearch");
+    const detailCsvBtn = $("#fytoDetailCsvBtn");
+    const extCsvBtn = $("#fytoExtendedCsvBtn");
+
+    // reset detail UI each time we open a new plant
+    if (detailBox) detailBox.style.display = "none";
+    if (detailMeta) detailMeta.textContent = "";
+    if (detailSearch) detailSearch.value = "";
+    const thead = $("#fytoDetailTable thead");
+    const tbody = $("#fytoDetailTable tbody");
+    if (thead) thead.innerHTML = "";
+    if (tbody) tbody.innerHTML = "";
+
+    const currentTyp = STATE.selected.typology;
+
+    async function loadAndRenderDetail(){
+      if(!STATE.selected.layers.fyto || !plant.fytoRow) return {all:[], filtered:[]};
+
+      const detailPath = buildFytoDetailPath(currentTyp);
+      const cacheKey = `${detailPath}`;
+      let allRows = STATE.fytoDetailCache.get(cacheKey);
+
+      if(!allRows){
+        const wb = await fetchXlsx(detailPath);
+        const sheet = wb.SheetNames[0];
+        allRows = sheetToJson(wb, sheet);
+        STATE.fytoDetailCache.set(cacheKey, allRows);
+      }
+
+      const latin = keyLatin(plant.latin);
+      const dutch = keyLatin(plant.dutch || "");
+
+      // filter rows for this plant (latin first, fallback dutch)
+      const plantRows = allRows.filter(r => {
+        const rLat = keyLatin(rowLatin(r));
+        const rDu = keyLatin(rowDutch(r));
+        return (rLat && rLat === latin) || (!rLat && rDu && rDu === dutch) || (rDu && rDu === dutch);
+      });
+
+      // render table
+      const q = (detailSearch?.value || "").trim().toLowerCase();
+      const filtered = q ? plantRows.filter(r => stringifyRow(r).includes(q)) : plantRows;
+
+      if(detailMeta){
+        detailMeta.textContent = `${filtered.length} / ${plantRows.length} studies (bron: ${detailPath.split("/").pop()})`;
+      }
+
+      if(!thead || !tbody) return {all:plantRows, filtered};
+      tbody.innerHTML = "";
+      thead.innerHTML = "";
+
+      if(filtered.length===0){
+        tbody.innerHTML = `<tr><td style="padding:10px">Geen detailrecords gevonden (of filter te strikt).</td></tr>`;
+        return {all:plantRows, filtered};
+      }
+
+      const headers = Object.keys(filtered[0]);
+      thead.innerHTML = `<tr>${headers.map(h=>`<th>${h}</th>`).join("")}</tr>`;
+      for(const r of filtered){
+        const tr = document.createElement("tr");
+        for(const h of headers){
+          const td = document.createElement("td");
+          td.textContent = norm(r[h]);
+          tr.appendChild(td);
+        }
+        tbody.appendChild(tr);
+      }
+      return {all:plantRows, filtered};
+    }
+
+    if(moreBtn){
+      moreBtn.onclick = async () => {
+        if(!detailBox) return;
+        const willOpen = detailBox.style.display === "none";
+        detailBox.style.display = willOpen ? "block" : "none";
+        if(willOpen){
+          try{
+            await loadAndRenderDetail();
+          }catch(err){
+            if(detailMeta) detailMeta.textContent = `Detailbestand niet gevonden of kon niet gelezen worden.`;
+          }
+        }
+      };
+    }
+
+    if(detailSearch){
+      detailSearch.oninput = async () => {
+        if(detailBox && detailBox.style.display !== "none"){
+          try{ await loadAndRenderDetail(); }catch(e){}
+        }
+      };
+    }
+
+    if(detailCsvBtn){
+      detailCsvBtn.onclick = async () => {
+        try{
+          const {filtered} = await loadAndRenderDetail();
+          const csv = rowsToCsv(filtered);
+          downloadText(`fyto_detail_${plant.latin}.csv`, csv || "");
+        }catch(err){
+          if(detailMeta) detailMeta.textContent = `Kan detail CSV niet exporteren.`;
+        }
+      };
+    }
+
+    if(extCsvBtn){
+      extCsvBtn.onclick = async () => {
+        try{
+          const {all} = await loadAndRenderDetail();
+          // Extended CSV: first a summary row with ecoflora raw + fyto summary fields, then blank line, then detail table
+          const summary = {
+            "Latijnse naam": plant.latin,
+            "Nederlandse naam": plant.dutch || "",
+            ...plant.raw,
+            "FYTO_comments": $("#fytoComments")?.textContent || "",
+            "FYTO_site": $("#fytoSite")?.textContent || "",
+            "FYTO_reference": $("#fytoRef")?.textContent || "",
+            "FYTO_medium": STATE.selected.fytoMedium || "",
+            "FYTO_pollutant": STATE.selected.fytoPollutant || ""
+          };
+          const csv1 = rowsToCsv([summary]);
+          const csv2 = rowsToCsv(all);
+          const combo = csv1 + "\\n\\n" + "FYTO_DETAIL" + "\\n" + (csv2 || "");
+          downloadText(`extended_${plant.latin}.csv`, combo);
+        }catch(err){
+          if(detailMeta) detailMeta.textContent = `Kan extended CSV niet exporteren.`;
+        }
+      };
+    }
+
 
   const imgHost = $("#drawerImages");
   imgHost.innerHTML = `<div class="hint">Foto's laden…</div>`;
@@ -897,17 +925,7 @@ function toCsv(rows) {
   ].join("\n");
 }
 
-function downloadText(filename, text) {
-  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 250);
-}
+
 
 // ── Extra filters UI ─────────────────────────────────────────────────────────
 
@@ -1010,8 +1028,7 @@ async function loadBoboOptions() {
 async function loadRegionOptions() {
   try {
     const wb = await fetchXlsx("data/layers/regionale_soortenlijst/List_options_regionale_soortenlijst.xlsx");
-    const sheet = pickSheetWithHeaders(wb, ["latijnse naam","nederlandse naam","latijns","wetenschappelijke naam","soort"]);
-    const rows = sheetToJson(wb, sheet);
+    const rows = sheetToJson(wb, firstSheetName(wb));
     const districts = rows
       .map(r => norm(r["Districten"] || r["districten"]))
       .filter(Boolean);
