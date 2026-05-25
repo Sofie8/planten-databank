@@ -1,7 +1,7 @@
 /* Planten Databank – client-side (GitHub Pages) */
 "use strict";
 
-const \$ = (sel) => document.querySelector(sel);
+const $ = (sel) => document.querySelector(sel);
 
 const FYTO_POLLUTANTS = ["PFAS", "metalen", "organische"];
 const FYTO_MEDIA = ["bodemwater", "lucht"];
@@ -150,7 +150,7 @@ function districtToFilename(d) {
 function layerFiles(layerKey, typology) {
   if (layerKey === "regionaal") {
     if (!STATE.selected.district) return [];
-    return [layerFileToPath(`regionale_soortenlijst/${districtToFilename(STATE.selected.district).replace(/\.xlsx\$/i, "")}`)];
+    return [layerFileToPath(`regionale_soortenlijst/${districtToFilename(STATE.selected.district).replace(/\.xlsx$/i, "")}`)];
   }
   if (layerKey === "bobo") {
     if (!STATE.selected.boboGroup) return [];
