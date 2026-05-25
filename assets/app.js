@@ -63,17 +63,17 @@ function uniqSorted(arr) {
 
 async function fetchXlsx(path) {
   const res = await fetch(path);
-  if (!res.ok) throw new Error(`Fetch failed: \${path} (\${res.status})`);
+  if (!res.ok) throw new Error(`Fetch failed: ${path} (${res.status})`);
   const buf = await res.arrayBuffer();
   return XLSX.read(buf, { type: "array" });
 }
 
 function typologyFileToPath(name) {
-  return `data/typologies/\${name}.xlsx`;
+  return `data/typologies/${name}.xlsx`;
 }
 
 function layerFileToPath(name) {
-  return `data/layers/\${name}.xlsx`;
+  return `data/layers/${name}.xlsx`;
 }
 
 function firstSheetName(wb) { return wb.SheetNames[0]; }
@@ -82,10 +82,10 @@ function pickFytoSheetName(wb) {
   const pol = (STATE.selected.fytoPollutant || "PFAS").toString();
   const med = (STATE.selected.fytoMedium || "bodemwater").toString();
   const candidates = [
-    `\${med}_\${pol}`,
-    `\${med}_\${pol.toLowerCase()}`,
-    `\${med.toLowerCase()}_\${pol}`,
-    `\${med.toLowerCase()}_\${pol.toLowerCase()}`
+    `${med}_${pol}`,
+    `${med}_${pol.toLowerCase()}`,
+    `${med.toLowerCase()}_${pol}`,
+    `${med.toLowerCase()}_${pol.toLowerCase()}`
   ];
   for (const cand of candidates) {
     const hit = wb.SheetNames.find(n => n === cand);
@@ -150,11 +150,11 @@ function districtToFilename(d) {
 function layerFiles(layerKey, typology) {
   if (layerKey === "regionaal") {
     if (!STATE.selected.district) return [];
-    return [layerFileToPath(`regionale_soortenlijst/\${districtToFilename(STATE.selected.district).replace(/\.xlsx\$/i, "")}`)];
+    return [layerFileToPath(`regionale_soortenlijst/${districtToFilename(STATE.selected.district).replace(/\.xlsx\$/i, "")}`)];
   }
   if (layerKey === "bobo") {
     if (!STATE.selected.boboGroup) return [];
-    return [layerFileToPath(`bobo_regio/BOBO_\${STATE.selected.boboGroup}`)];
+    return [layerFileToPath(`bobo_regio/BOBO_${STATE.selected.boboGroup}`)];
   }
   if (layerKey === "fyto") {
     const names = (STATE.config?.layers?.fytoremediatie?.[typology] ?? []).map(norm).filter(Boolean);
@@ -509,7 +509,7 @@ async function applyLayers() {
 // ── Table ────────────────────────────────────────────────────────────────────
 
 function rebuildTableHeader() {
-  const thead = \$("#results thead");
+  const thead = $("#results thead");
   if (!thead) return;
   const base = ["Latijnse naam", "Nederlandse naam", "Bodemtype", "Vocht", "pH", "Lagen"];
   const cols = [...base, ...STATE.table.extraCols.map(c => c.label)];
@@ -525,10 +525,10 @@ function rebuildTableHeader() {
 
 function render(plants) {
   rebuildTableHeader();
-  const tbody = \$("#results tbody");
+  const tbody = $("#results tbody");
   tbody.innerHTML = "";
   const filtered = plants.filter(matchesAll);
-  \$("#resultsMeta").textContent = `\${filtered.length} resultaten`;
+  $("#resultsMeta").textContent = `${filtered.length} resultaten`;
 
   for (const p of filtered) {
     const tr = document.createElement("tr");
@@ -591,7 +591,7 @@ function render(plants) {
 // ── Photos + carousel ────────────────────────────────────────────────────────
 
 function urlForFotoId(id, ext) {
-  return `\${IMAGE_BASE_URL}/\${id}.\${ext}`;
+  return `${IMAGE_BASE_URL}/${id}.${ext}`;
 }
 
 function loadImage(url) {
@@ -627,27 +627,27 @@ async function resolveFotoUrls(fotoIds, max = 80) {
 // ── Drawer ───────────────────────────────────────────────────────────────────
 
 function openDrawer(plant) {
-  const drawer = \$("#detailDrawer");
+  const drawer = $("#detailDrawer");
   if (!drawer) return;
 
-  \$("#drawerTitle").textContent = plant.latin;
-  \$("#drawerSub").textContent = plant.dutch || "";
-  \$("#drawerSoil").textContent = (plant.traits.bodemtype || []).join(", ") || "—";
-  \$("#drawerMoist").textContent = (plant.traits.bodemvocht || []).join(", ") || "—";
-  \$("#drawerPh").textContent = (plant.traits.zuur || []).join(", ") || "—";
-  \$("#drawerSpread").textContent = (plant.traits.verspreiding || []).join(", ") || "—";
+  $("#drawerTitle").textContent = plant.latin;
+  $("#drawerSub").textContent = plant.dutch || "";
+  $("#drawerSoil").textContent = (plant.traits.bodemtype || []).join(", ") || "—";
+  $("#drawerMoist").textContent = (plant.traits.bodemvocht || []).join(", ") || "—";
+  $("#drawerPh").textContent = (plant.traits.zuur || []).join(", ") || "—";
+  $("#drawerSpread").textContent = (plant.traits.verspreiding || []).join(", ") || "—";
 
-  const fytoBox = \$("#drawerFyto");
+  const fytoBox = $("#drawerFyto");
   if (STATE.selected.layers.fyto && plant.fytoRow) {
     fytoBox.style.display = "block";
-    \$("#fytoComments").textContent = pickAny(plant.fytoRow, ["Comments on phytoremedial effectiveness"]) || "—";
-    \$("#fytoSite").textContent = pickAny(plant.fytoRow, ["Continent-Country-City-Site"]) || "—";
-    \$("#fytoRef").textContent = pickAny(plant.fytoRow, ["Reference (author, year, doi)", "Reference (author, year)", "Reference"]) || "—";
+    $("#fytoComments").textContent = pickAny(plant.fytoRow, ["Comments on phytoremedial effectiveness"]) || "—";
+    $("#fytoSite").textContent = pickAny(plant.fytoRow, ["Continent-Country-City-Site"]) || "—";
+    $("#fytoRef").textContent = pickAny(plant.fytoRow, ["Reference (author, year, doi)", "Reference (author, year)", "Reference"]) || "—";
   } else {
     fytoBox.style.display = "none";
   }
 
-  const imgHost = \$("#drawerImages");
+  const imgHost = $("#drawerImages");
   imgHost.innerHTML = `<div class="hint">Foto's laden…</div>`;
   const ids = plant.fotoIds || [];
 
@@ -655,7 +655,7 @@ function openDrawer(plant) {
     imgHost.innerHTML = `<div class="hint">Geen foto_ids voor deze plant.</div>`;
   } else {
     resolveFotoUrls(ids, 80).then((urls) => {
-      if (\$("#drawerTitle").textContent !== plant.latin) return;
+      if ($("#drawerTitle").textContent !== plant.latin) return;
       if (!urls.length) {
         imgHost.innerHTML = `<div class="hint">Geen foto's gevonden voor deze plant.</div>`;
         return;
@@ -664,18 +664,18 @@ function openDrawer(plant) {
       const renderCarousel = () => {
         imgHost.innerHTML = `
           <div class="carousel">
-            <img class="carouselMain" src="\${urls[idx]}" alt="foto \${idx + 1}">
+            <img class="carouselMain" src="${urls[idx]}" alt="foto ${idx + 1}">
             <button class="carouselBtn prev" id="carouselPrev" aria-label="vorige">‹</button>
             <button class="carouselBtn next" id="carouselNext" aria-label="volgende">›</button>
-            <div class="carouselCounter">\${idx + 1} / \${urls.length}</div>
+            <div class="carouselCounter">${idx + 1} / ${urls.length}</div>
           </div>
         `;
-        \$("#carouselPrev").addEventListener("click", (e) => {
+        $("#carouselPrev").addEventListener("click", (e) => {
           e.stopPropagation();
           idx = (idx - 1 + urls.length) % urls.length;
           renderCarousel();
         });
-        \$("#carouselNext").addEventListener("click", (e) => {
+        $("#carouselNext").addEventListener("click", (e) => {
           e.stopPropagation();
           idx = (idx + 1) % urls.length;
           renderCarousel();
@@ -690,18 +690,18 @@ function openDrawer(plant) {
 }
 
 function closeDrawer() {
-  const drawer = \$("#detailDrawer");
+  const drawer = $("#detailDrawer");
   if (!drawer) return;
   drawer.classList.remove("open");
   drawer.setAttribute("aria-hidden", "true");
-  const imgHost = \$("#drawerImages");
+  const imgHost = $("#drawerImages");
   if (imgHost) imgHost.innerHTML = "";
 }
 
 // ── CSV export ───────────────────────────────────────────────────────────────
 
 function toCsv(rows) {
-  const esc = (v) => `"\${String(v ?? "").replaceAll('"', '""')}"`;
+  const esc = (v) => `"${String(v ?? "").replaceAll('"', '""')}"`;
   const headers = [
     "Latijnse naam", "Nederlandse naam", "Bodemtype", "Vocht", "pH",
     "Verspreiding", "Lagen",
@@ -741,7 +741,7 @@ function downloadText(filename, text) {
 // ── Extra filters UI ─────────────────────────────────────────────────────────
 
 function toggleFacetPanel(id) {
-  const body = document.querySelector(`#facetBody_\${id}`);
+  const body = document.querySelector(`#facetBody_${id}`);
   if (body) body.classList.toggle("open");
 }
 
@@ -750,7 +750,7 @@ function humanizeFacetKey(k) {
 }
 
 function renderExtraFilters(plants) {
-  const host = \$("#extraFiltersList");
+  const host = $("#extraFiltersList");
   if (!host) return;
   host.innerHTML = "";
   const counts = computeFacetOptions(plants);
@@ -772,8 +772,8 @@ function renderExtraFilters(plants) {
     header.className = "facetHeader";
     header.innerHTML = `
       <div>
-        <div class="facetTitle">\${humanizeFacetKey(k)}</div>
-        <div class="facetMeta">\${entries.length} opties</div>
+        <div class="facetTitle">${humanizeFacetKey(k)}</div>
+        <div class="facetMeta">${entries.length} opties</div>
       </div>
       <div>▾</div>
     `;
@@ -781,17 +781,17 @@ function renderExtraFilters(plants) {
 
     const body = document.createElement("div");
     body.className = "facetBody";
-    body.id = `facetBody_\${idx}`;
+    body.id = `facetBody_${idx}`;
 
     const opts = document.createElement("div");
     opts.className = "facetOptions";
 
     const selectedSet = STATE.selected.facets.get(k) || new Set();
     for (const [val, count] of entries) {
-      const safeId = `facet_\${idx}_\${val.replace(/[^a-z0-9]+/g, "_")}`;
+      const safeId = `facet_${idx}_${val.replace(/[^a-z0-9]+/g, "_")}`;
       const wrap = document.createElement("label");
       wrap.className = "opt";
-      wrap.innerHTML = `<input type="checkbox" id="\${safeId}"><span>\${val} <span style="opacity:.7">(\${count})</span></span>`;
+      wrap.innerHTML = `<input type="checkbox" id="${safeId}"><span>${val} <span style="opacity:.7">(${count})</span></span>`;
       const cb = wrap.querySelector("input");
       cb.checked = selectedSet.has(val);
       cb.addEventListener("change", () => {
@@ -853,7 +853,7 @@ async function loadRegionOptions() {
 // ── Main load ────────────────────────────────────────────────────────────────
 
 async function loadTypologyAndRender() {
-  const meta = \$("#resultsMeta");
+  const meta = $("#resultsMeta");
   if (meta) meta.textContent = "Laden…";
   STATE.selected.facets = new Map();
   STATE.plants = await loadTypologyPlants(
@@ -861,10 +861,10 @@ async function loadTypologyAndRender() {
     STATE.selected.subtype
   );
   const opts = computeBaseFilterOptions(STATE.plants);
-  fillSelect(\$("#soilType"), opts.soil);
-  fillSelect(\$("#soilMoisture"), opts.moist);
-  fillSelect(\$("#acidity"), opts.acid);
-  fillSelect(\$("#spread"), opts.spread);
+  fillSelect($("#soilType"), opts.soil);
+  fillSelect($("#soilMoisture"), opts.moist);
+  fillSelect($("#acidity"), opts.acid);
+  fillSelect($("#spread"), opts.spread);
   await applyLayers();
   renderExtraFilters(STATE.plants);
   render(STATE.plants);
@@ -873,13 +873,13 @@ async function loadTypologyAndRender() {
 // ── Wiring ───────────────────────────────────────────────────────────────────
 
 function wire() {
-  \$("#drawerClose")?.addEventListener("click", closeDrawer);
+  $("#drawerClose")?.addEventListener("click", closeDrawer);
   window.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDrawer(); });
 
-  \$("#typology").addEventListener("change", async (e) => {
+  $("#typology").addEventListener("change", async (e) => {
     STATE.selected.typology = e.target.value;
     const subs = subtypeOptions(STATE.selected.typology);
-    const subSel = \$("#subtype");
+    const subSel = $("#subtype");
     subSel.innerHTML = "";
     for (const s of subs) {
       const opt = document.createElement("option");
@@ -892,58 +892,58 @@ function wire() {
     await loadTypologyAndRender();
   });
 
-  \$("#subtype").addEventListener("change", async (e) => {
+  $("#subtype").addEventListener("change", async (e) => {
     STATE.selected.subtype = e.target.value;
     await loadTypologyAndRender();
   });
 
-  \$("#soilType").addEventListener("change", (e) => {
+  $("#soilType").addEventListener("change", (e) => {
     STATE.selected.soilType = e.target.value;
     render(STATE.plants);
   });
 
-  \$("#soilMoisture").addEventListener("change", (e) => {
+  $("#soilMoisture").addEventListener("change", (e) => {
     STATE.selected.soilMoisture = e.target.value;
     render(STATE.plants);
   });
 
-  \$("#acidity").addEventListener("change", (e) => {
+  $("#acidity").addEventListener("change", (e) => {
     STATE.selected.acidity = e.target.value;
     render(STATE.plants);
   });
 
-  \$("#spread").addEventListener("change", (e) => {
+  $("#spread").addEventListener("change", (e) => {
     STATE.selected.spread = e.target.value;
     render(STATE.plants);
   });
 
-  \$("#layer_klimaat").addEventListener("change", async (e) => {
+  $("#layer_klimaat").addEventListener("change", async (e) => {
     STATE.selected.layers.klimaat = e.target.checked;
     await applyLayers();
     render(STATE.plants);
   });
 
-  \$("#layer_amber").addEventListener("change", async (e) => {
+  $("#layer_amber").addEventListener("change", async (e) => {
     STATE.selected.layers.amber = e.target.checked;
     await applyLayers();
     render(STATE.plants);
   });
 
-  \$("#layer_regionaal").addEventListener("change", async (e) => {
+  $("#layer_regionaal").addEventListener("change", async (e) => {
     STATE.selected.layers.regionaal = e.target.checked;
-    \$("#districtWrap").style.display = e.target.checked ? "block" : "none";
+    $("#districtWrap").style.display = e.target.checked ? "block" : "none";
     await applyLayers();
     render(STATE.plants);
   });
 
-  \$("#district").addEventListener("change", async (e) => {
+  $("#district").addEventListener("change", async (e) => {
     STATE.selected.district = e.target.value;
     await applyLayers();
     render(STATE.plants);
   });
 
-  const paint = \$("#regionModePaint");
-  const filt = \$("#regionModeFilter");
+  const paint = $("#regionModePaint");
+  const filt = $("#regionModeFilter");
   if (paint && filt) {
     paint.addEventListener("change", () => {
       if (paint.checked) {
@@ -959,40 +959,40 @@ function wire() {
     });
   }
 
-  \$("#layer_bobo").addEventListener("change", async (e) => {
+  $("#layer_bobo").addEventListener("change", async (e) => {
     STATE.selected.layers.bobo = e.target.checked;
-    \$("#boboWrap").style.display = e.target.checked ? "block" : "none";
-    \$("#boboCodeWrap").style.display = e.target.checked ? "block" : "none";
+    $("#boboWrap").style.display = e.target.checked ? "block" : "none";
+    $("#boboCodeWrap").style.display = e.target.checked ? "block" : "none";
     await applyLayers();
     render(STATE.plants);
   });
 
-  \$("#boboGroup").addEventListener("change", async (e) => {
+  $("#boboGroup").addEventListener("change", async (e) => {
     STATE.selected.boboGroup = e.target.value;
     const codes = STATE.options.bobo.codesByGroup.get(STATE.selected.boboGroup) || [];
-    fillSelect(\$("#boboCode"), codes, true);
-    STATE.selected.boboCode = \$("#boboCode").value || "ALLE";
+    fillSelect($("#boboCode"), codes, true);
+    STATE.selected.boboCode = $("#boboCode").value || "ALLE";
     await applyLayers();
     render(STATE.plants);
   });
 
-  \$("#boboCode").addEventListener("change", async (e) => {
+  $("#boboCode").addEventListener("change", async (e) => {
     STATE.selected.boboCode = e.target.value;
     await applyLayers();
     render(STATE.plants);
   });
 
-  \$("#layer_fyto").addEventListener("change", async (e) => {
+  $("#layer_fyto").addEventListener("change", async (e) => {
     STATE.selected.layers.fyto = e.target.checked;
-    const wrap = \$("#fytoWrap");
+    const wrap = $("#fytoWrap");
     if (wrap) wrap.style.display = e.target.checked ? "grid" : "none";
     await applyLayers();
     render(STATE.plants);
   });
 
   // ── Fyto dropdowns ──────────────────────────────────────────────────────
-  const fytoP = \$("#fytoPollutant");
-  const fytoM = \$("#fytoMedium");
+  const fytoP = $("#fytoPollutant");
+  const fytoM = $("#fytoMedium");
 
   if (fytoP) {
     fytoP.addEventListener("change", async (e) => {
@@ -1014,9 +1014,9 @@ function wire() {
     });
   }
 
-  \$("#exportCsv").addEventListener("click", () => {
+  $("#exportCsv").addEventListener("click", () => {
     const filtered = STATE.plants.filter(matchesAll);
-    const filename = `planten_\${STATE.selected.typology}_\${STATE.selected.subtype}.csv`;
+    const filename = `planten_${STATE.selected.typology}_${STATE.selected.subtype}.csv`;
     downloadText(filename, toCsv(filtered));
   });
 }
@@ -1029,7 +1029,7 @@ async function init() {
   await loadRegionOptions();
 
   // typology dropdown
-  const typSel = \$("#typology");
+  const typSel = $("#typology");
   typSel.innerHTML = "";
   const typs = typologyOptions();
   for (const t of typs) {
@@ -1042,7 +1042,7 @@ async function init() {
   typSel.value = STATE.selected.typology;
 
   // subtype dropdown
-  const subSel = \$("#subtype");
+  const subSel = $("#subtype");
   subSel.innerHTML = "";
   const subs = subtypeOptions(STATE.selected.typology);
   for (const s of subs) {
@@ -1055,7 +1055,7 @@ async function init() {
   subSel.value = STATE.selected.subtype;
 
   // district dropdown
-  const districtSel = \$("#district");
+  const districtSel = $("#district");
   districtSel.innerHTML = "";
   const opt0 = document.createElement("option");
   opt0.value = "";
@@ -1070,7 +1070,7 @@ async function init() {
   STATE.selected.district = "";
 
   // bobo dropdowns
-  const bg = \$("#boboGroup");
+  const bg = $("#boboGroup");
   bg.innerHTML = "";
   const optG = document.createElement("option");
   optG.value = "";
@@ -1083,12 +1083,12 @@ async function init() {
     bg.appendChild(opt);
   }
   STATE.selected.boboGroup = "";
-  fillSelect(\$("#boboCode"), [], true);
+  fillSelect($("#boboCode"), [], true);
   STATE.selected.boboCode = "ALLE";
 
   // fyto selects
-  const fytoP = \$("#fytoPollutant");
-  const fytoM = \$("#fytoMedium");
+  const fytoP = $("#fytoPollutant");
+  const fytoM = $("#fytoMedium");
   if (fytoP && fytoM) {
     fillSimpleSelect(fytoP, FYTO_POLLUTANTS, false);
     fillSimpleSelect(fytoM, FYTO_MEDIA, false);
