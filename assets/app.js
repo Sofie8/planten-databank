@@ -490,8 +490,6 @@ async function applyLayers() {
     buildFytoColumns();
   }
 
-    buildFytoColumns();
-  }
 }
 
 // ── Table ─────────────────────────────────────────────────────────────────────
@@ -919,7 +917,6 @@ function wire() {
     if (wrap) wrap.style.display = e.target.checked ? "grid" : "none";
     await applyLayers();
     render(STATE.plants);
-  });
   });
 
   $("#exportCsv").addEventListener("click", () => {
