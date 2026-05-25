@@ -4,7 +4,16 @@
 const $ = (sel) => document.querySelector(sel);
 
 const FYTO_POLLUTANTS = ["PFAS", "metalen", "organische"];
+const FYTO_POLLUTANT_LABELS = {
+  PFAS: "PFAS",
+  metalen: "zware metalen",
+  organische: "dioxine- en polychloorbifenylen (PCBs)"
+};
 const FYTO_MEDIA = ["bodemwater", "lucht"];
+const FYTO_MEDIA_LABELS = {
+  bodemwater: "bodem en water",
+  lucht: "lucht"
+};
 const IMAGE_BASE_URL = "https://pub-bb204453b9b642598d8514f7ac4f68be.r2.dev/images";
 
 const STATE = {
@@ -153,8 +162,10 @@ function layerFiles(layerKey, typology) {
     return [layerFileToPath(`regionale_soortenlijst/${districtToFilename(STATE.selected.district).replace(/\.xlsx$/i, "")}`)];
   }
   if (layerKey === "bobo") {
-    if (!STATE.selected.boboGroup) return [];
-    return [layerFileToPath(`bobo_regio/BOBO_${STATE.selected.boboGroup}`)];
+    // BOBO files are per bodemcode, e.g. data/layers/bobo_regio/BOBO_zdg.xlsx
+    const code = (STATE.selected.boboCode || "").trim();
+    if (!code || code === "ALLE") return [];
+    return [layerFileToPath(`bobo_regio/BOBO_${code}`)];
   }
   if (layerKey === "fyto") {
     const names = (STATE.config?.layers?.fytoremediatie?.[typology] ?? []).map(norm).filter(Boolean);
@@ -305,6 +316,21 @@ function fillSimpleSelect(selectEl, values, includeAll = false, allLabel = "Alle
   for (const v of values) add(v, v);
   const cand = prev || (includeAll ? "ALLE" : (values[0] || ""));
   if (Array.from(selectEl.options).some(o => o.value === cand)) selectEl.value = cand;
+}
+
+function fillSelectWithLabels(selectEl, values, labelsMap){
+  if(!selectEl) return;
+  const prev = selectEl.value;
+  selectEl.innerHTML = "";
+  for(const v of values){
+    const opt = document.createElement("option");
+    opt.value = v;
+    opt.textContent = (labelsMap && labelsMap[v]) ? labelsMap[v] : v;
+    selectEl.appendChild(opt);
+  }
+  if(prev && Array.from(selectEl.options).some(o => o.value === prev)){
+    selectEl.value = prev;
+  }
 }
 
 function fillSelect(selectEl, values, includeAll = true) {
@@ -464,20 +490,14 @@ async function applyLayers() {
   }
 
   if (STATE.selected.layers.bobo) {
-    const idx = await loadLayerIndex(layerFiles("bobo", typ));
-    const wanted = STATE.selected.boboCode;
-    for (const p of STATE.plants) {
-      const row = matchLayerRow(idx, p);
-      if (!row) continue;
-      const code = pickAny(row, ["code", "Code", "bodemcode", "Bodemcode", "BOBO", "bobo_code", "BOBO code", "bobo"]);
-      if (wanted && wanted !== "ALLE") {
-        if (code && norm(code).toLowerCase() === norm(wanted).toLowerCase()) {
-          p.layers.bobo = true;
-          p.boboCode = code || wanted;
-        }
-      } else {
+    const code = (STATE.selected.boboCode || "").trim();
+    if (code && code !== "ALLE") {
+      const idx = await loadLayerIndex(layerFiles("bobo", typ));
+      for (const p of STATE.plants) {
+        const row = matchLayerRow(idx, p);
+        if (!row) continue;
         p.layers.bobo = true;
-        p.boboCode = code || null;
+        p.boboCode = code;
       }
     }
   }
@@ -1090,8 +1110,8 @@ async function init() {
   const fytoP = $("#fytoPollutant");
   const fytoM = $("#fytoMedium");
   if (fytoP && fytoM) {
-    fillSimpleSelect(fytoP, FYTO_POLLUTANTS, false);
-    fillSimpleSelect(fytoM, FYTO_MEDIA, false);
+    fillSelectWithLabels(fytoP, FYTO_POLLUTANTS, FYTO_POLLUTANT_LABELS);
+    fillSelectWithLabels(fytoM, FYTO_MEDIA, FYTO_MEDIA_LABELS);
     fytoP.value = STATE.selected.fytoPollutant || "PFAS";
     fytoM.value = STATE.selected.fytoMedium || "bodemwater";
   }
