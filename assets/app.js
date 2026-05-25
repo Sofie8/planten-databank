@@ -11,6 +11,9 @@ const $ = (sel) => document.querySelector(sel);
 
 // ✅ Zet je R2 public URL hier.
 // Verwacht: https://...r2.dev/images/<foto_id>.jpg
+const FYTO_POLLUTANTS = ["PFAS","metalen","organische"];
+const FYTO_MEDIA = ["bodemwater","lucht"];
+
 const IMAGE_BASE_URL = "https://pub-bb204453b9b642598d8514f7ac4f68be.r2.dev/images";
 
 const STATE = {
@@ -31,6 +34,8 @@ const STATE = {
     boboGroup: "",
     boboCode: "ALLE",
     facets: new Map(),
+    fytoPollutant: "PFAS",
+    fytoMedium: "bodemwater",
   },
   table: { extraCols: [] },
 };
@@ -76,6 +81,26 @@ function layerFileToPath(name){
 }
 
 function firstSheetName(wb) { return wb.SheetNames[0]; }
+
+function pickFytoSheetName(wb){
+  const pol = (STATE.selected.fytoPollutant || "PFAS").toString();
+  const med = (STATE.selected.fytoMedium || "bodemwater").toString();
+  const candidates = [
+    `${med}_${pol}`,
+    `${med}_${pol.toLowerCase()}`,
+    `${med.toLowerCase()}_${pol}`,
+    `${med.toLowerCase()}_${pol.toLowerCase()}`
+  ];
+  for(const cand of candidates){
+    const hit = wb.SheetNames.find(n => n === cand);
+    if(hit) return hit;
+    // case-insensitive match
+    const hit2 = wb.SheetNames.find(n => n.toLowerCase() === cand.toLowerCase());
+    if(hit2) return hit2;
+  }
+  return wb.SheetNames[0];
+}
+
 function sheetToJson(wb, sheetName) {
   return XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: "" });
 }
@@ -272,6 +297,17 @@ async function loadLayerIndex(files) {
 }
 
 // ── Select helpers ────────────────────────────────────────────────────────────
+function fillSimpleSelect(selectEl, values, includeAll=false, allLabel="Alle"){ 
+  if(!selectEl) return;
+  const prev = selectEl.value;
+  selectEl.innerHTML = "";
+  const add=(v,t)=>{ const o=document.createElement("option"); o.value=v; o.textContent=t??v; selectEl.appendChild(o); };
+  if(includeAll) add("ALLE", allLabel);
+  for(const v of values) add(v,v);
+  const cand = prev || (includeAll?"ALLE":(values[0]||""));
+  if(Array.from(selectEl.options).some(o=>o.value===cand)) selectEl.value=cand;
+}
+
 function fillSelect(selectEl, values, includeAll = true) {
   if (!selectEl) return;
   const prev = selectEl.value;
@@ -427,13 +463,33 @@ async function applyLayers() {
     }
   }
   if (STATE.selected.layers.fyto) {
-    const idx = await loadLayerIndex(layerFiles("fyto", typ));
+    // Load the configured fyto summary files for this typology, but read the sheet based on fytoPollutant+fytoMedium
+    const files = layerFiles("fyto", typ);
+    const idx = new Map();
+
+    for (const file of files) {
+      // reuse cache if possible: cache key includes file+sheet
+      const wb = await fetchXlsx(file);
+      const sheetName = pickFytoSheetName(wb);
+      const rows = sheetToJson(wb, sheetName);
+
+      for (const r of rows) {
+        const latin = rowLatin(r);
+        const dutch = rowDutch(r);
+        if (latin) idx.set(keyLatin(latin), r);
+        if (dutch) idx.set(keyDutch(dutch), r);
+      }
+    }
+
     for (const p of STATE.plants) {
       const row = matchLayerRow(idx, p);
       if (!row) continue;
       p.layers.fyto = true;
       p.fytoRow = row;
     }
+    buildFytoColumns();
+  }
+
     buildFytoColumns();
   }
 }
@@ -859,7 +915,11 @@ function wire() {
 
   $("#layer_fyto").addEventListener("change", async (e) => {
     STATE.selected.layers.fyto = e.target.checked;
-    await applyLayers(); render(STATE.plants);
+    const wrap = $("#fytoWrap");
+    if (wrap) wrap.style.display = e.target.checked ? "grid" : "none";
+    await applyLayers();
+    render(STATE.plants);
+  });
   });
 
   $("#exportCsv").addEventListener("click", () => {
@@ -926,6 +986,16 @@ async function init() {
   STATE.selected.boboGroup = "";
   fillSelect($("#boboCode"), [], true);
   STATE.selected.boboCode = "ALLE";
+
+  // init fyto selects
+  const fytoP = $("#fytoPollutant");
+  const fytoM = $("#fytoMedium");
+  if(fytoP && fytoM){
+    fillSimpleSelect(fytoP, FYTO_POLLUTANTS, false);
+    fillSimpleSelect(fytoM, FYTO_MEDIA, false);
+    fytoP.value = STATE.selected.fytoPollutant || "PFAS";
+    fytoM.value = STATE.selected.fytoMedium || "bodemwater";
+  }
 
   wire();
   await loadTypologyAndRender();
