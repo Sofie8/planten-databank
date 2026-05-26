@@ -615,7 +615,11 @@ details[open] .extra-title { margin-bottom: 10px; color: var(--text); }
 .right    { display: flex; gap: 10px; align-items: center; }
 details summary { cursor: pointer; }
 .pad { padding: 8px 2px; }
-/* Fyto detail in drawer */
+/* Global search in results header */
+.resultsHeader{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+#globalSearch.input{flex:1;min-width:260px}
+
+/* Fyto detail UI */
 .fytoActions{margin-top:10px;display:flex;justify-content:flex-end}
 .fytoDetailBox{margin-top:10px;border:1px solid var(--line);border-radius:14px;padding:10px;background:rgba(255,255,255,.02)}
 .fytoDetailTop{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
