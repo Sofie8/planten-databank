@@ -1,3 +1,6 @@
+const meta = document.getElementById("resultsMeta");
+if (meta) meta.textContent = "✅ app.js geladen";
+
 /* Planten Databank – client-side (GitHub Pages) */
 "use strict";
 
