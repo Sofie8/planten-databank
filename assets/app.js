@@ -1,10 +1,12 @@
-const meta = document.getElementById("resultsMeta");
-if (meta) meta.textContent = "✅ app.js geladen";
+
 
 /* Planten Databank – client-side (GitHub Pages) */
 "use strict";
 
 const $ = (sel) => document.querySelector(sel);
+
+const meta = document.getElementById("resultsMeta");
+if (meta) meta.textContent = "✅ app.js geladen";
 
 const FYTO_POLLUTANTS = ["PFAS", "metalen", "organische"];
 const FYTO_POLLUTANT_LABELS = {
