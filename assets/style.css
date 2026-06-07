@@ -629,3 +629,11 @@ details summary { cursor: pointer; }
 .fytoDetailTable{width:100%;border-collapse:collapse;font-size:12px}
 .fytoDetailTable th,.fytoDetailTable td{border-bottom:1px solid var(--line);padding:8px;vertical-align:top}
 .fytoDetailTable th{position:sticky;top:0;background:#0b0f10;z-index:2}
+/* Ecoflora detail box in drawer */
+.ecoBox{margin-top:12px;border:1px solid var(--line2);border-radius:14px;padding:10px;background:rgba(255,255,255,.015)}
+.ecoHead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.ecoTitle{font-weight:800;font-size:13px;color:var(--muted);letter-spacing:.3px;text-transform:uppercase}
+.ecoTableWrap{max-height:260px;overflow:auto;border:1px solid var(--line2);border-radius:12px}
+.ecoTable{width:100%;border-collapse:collapse;font-size:12px;background:var(--table-bg)}
+.ecoTable th,.ecoTable td{border-bottom:1px solid var(--line);padding:8px;vertical-align:top}
+.ecoTable th{position:sticky;top:0;background:var(--table-head);z-index:2}
