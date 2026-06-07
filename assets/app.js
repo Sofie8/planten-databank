@@ -1,37 +1,41 @@
-/* Planten Databank – app.js (stable)
-   - Dropdowns + filters + layers (folders)
-   - BOBO per bodemcode file: data/layers/bobo_regio/BOBO_<code>.xlsx
-   - FYTO summary per typology file with sheets (bodemwater_PFAS, lucht_metalen, ...)
-   - Drawer: photos + Ecoflora all columns + FYTO summary + FYTO detail (Meer details + search + CSV exports)
+/* Planten Databank – robust client-side app.js
+   - Populates dropdowns reliably and never fails silently (status in #resultsMeta)
+   - Supports typology routing via config.json (relative paths under data/typologies/)
+   - Supports layer subfolders under data/layers/
+   - FYTO dropdowns (pollutant + medium) with display labels
+   - BOBO file per bodemcode: data/layers/bobo_regio/BOBO_<code>.xlsx
+   - Drawer with photos + FYTO summary + FYTO detail ("Meer details") + search + CSV exports
 */
 
 "use strict";
+
 const $ = (sel) => document.querySelector(sel);
-
 function setMeta(msg){ const el = $("#resultsMeta"); if(el) el.textContent = msg; }
-function logErr(err){ console.error(err); setMeta("⚠️ " + (err?.message || err)); }
+function warnMeta(msg){ const el = $("#resultsMeta"); if(el) el.textContent = "⚠️ " + msg; }
 
+// FYTO display labels (values stay stable for sheet/file logic)
 const FYTO_POLLUTANTS = ["PFAS", "metalen", "organische"];
 const FYTO_POLLUTANT_LABELS = {
   PFAS: "PFAS",
   metalen: "zware metalen",
-  organische: "dioxine- en polychloorbifenylen (PCBs)"
+  organische: "dioxine- en polychloorbifenylen (PCBs)",
 };
 const FYTO_MEDIA = ["bodemwater", "lucht"];
 const FYTO_MEDIA_LABELS = {
   bodemwater: "bodem en water",
-  lucht: "lucht"
+  lucht: "lucht",
 };
 
+// Images (R2)
 const IMAGE_BASE_URL = "https://pub-bb204453b9b642598d8514f7ac4f68be.r2.dev/images";
 
 const STATE = {
   config: null,
   plants: [],
   loaded: {
-    typology: new Map(),
-    layerIndex: new Map(),
-    fytoDetail: new Map(),
+    typology: new Map(),   // filePath => plant rows
+    layer: new Map(),      // filePath|sheet => layer index map
+    fytoDetail: new Map()  // detailPath => detail rows
   },
   selected: {
     typology: null,
@@ -47,6 +51,7 @@ const STATE = {
     boboCode: "ALLE",
     fytoPollutant: "PFAS",
     fytoMedium: "bodemwater",
+    facets: new Map(),
   },
   table: { extraCols: [] },
   ui: { currentPlantKey: "" }
@@ -56,15 +61,48 @@ function norm(s){ return String(s ?? "").replace(/\u00a0/g," ").trim().replace(/
 function keyLatin(s){ return norm(s).toLowerCase(); }
 function keyDutch(s){ return "nl:" + norm(s).toLowerCase(); }
 function splitList(s){
-  const t = norm(s); if(!t) return [];
+  const t = norm(s);
+  if(!t) return [];
   return t.split(/[,|]/).map(x=>norm(x).toLowerCase()).filter(Boolean);
 }
 function splitPipesRaw(s){
-  const t = norm(s); if(!t) return [];
+  const t = norm(s);
+  if(!t) return [];
   return t.split("|").map(x=>norm(x)).filter(Boolean);
 }
 function uniqSorted(arr){ return Array.from(new Set(arr)).sort((a,b)=>a.localeCompare(b)); }
 
+function rowLatin(row){
+  return norm(row["Latijnse naam"] || row["Latijnse naam "] || row["latijnse naam"] || row["LatijnseNaam"] || row["latin"] || row["Soort"] || "");
+}
+function rowDutch(row){
+  return norm(row["Nederlandse naam"] || row["Nederlandse naam "] || row["nederlandse naam"] || row["NederlandseNaam"] || row["dutch"] || "");
+}
+
+function fillSelect(selectEl, values, includeAll=true, allLabel="Alle"){
+  if(!selectEl) return;
+  const prev = selectEl.value;
+  selectEl.innerHTML = "";
+  const add = (v,t)=>{ const o=document.createElement("option"); o.value=v; o.textContent=t ?? v; selectEl.appendChild(o); };
+  if(includeAll) add("ALLE", allLabel);
+  for(const v of values) add(v,v);
+  const cand = prev || (includeAll ? "ALLE" : (values[0] || ""));
+  if(Array.from(selectEl.options).some(o=>o.value===cand)) selectEl.value=cand;
+}
+function fillSelectWithLabels(selectEl, values, labelsMap){
+  if(!selectEl) return;
+  const prev = selectEl.value;
+  selectEl.innerHTML = "";
+  for(const v of values){
+    const o=document.createElement("option");
+    o.value=v;
+    o.textContent = (labelsMap && labelsMap[v]) ? labelsMap[v] : v;
+    selectEl.appendChild(o);
+  }
+  if(prev && Array.from(selectEl.options).some(o=>o.value===prev)) selectEl.value=prev;
+}
+
+// XLSX
 async function fetchXlsx(path){
   const res = await fetch(path);
   if(!res.ok) throw new Error(`Fetch failed: ${path} (${res.status})`);
@@ -75,7 +113,7 @@ function sheetToJson(wb, sheetName){
   return XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {defval:""});
 }
 function pickBestSheetName(wb){
-  const wanted = new Set(["latijnse naam","nederlandse naam","kenmerk_bodemtype","comments on phytoremedial effectiveness","reference (author, year, doi)","extractor / excluder"]);
+  const wanted = new Set(["latijnse naam","nederlandse naam","kenmerk_bodemtype","comments on phytoremedial effectiveness","reference (author, year, doi)"]);
   for(const name of wb.SheetNames){
     const ws = wb.Sheets[name];
     const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
@@ -85,7 +123,7 @@ function pickBestSheetName(wb){
   }
   return wb.SheetNames[0];
 }
-function pickFytoSheetName(wb){
+function pickFytoSummarySheet(wb){
   const pol = (STATE.selected.fytoPollutant || "PFAS").toString();
   const med = (STATE.selected.fytoMedium || "bodemwater").toString();
   const candidates = [
@@ -101,8 +139,19 @@ function pickFytoSheetName(wb){
   return pickBestSheetName(wb);
 }
 
-function typologyFileToPath(name){ return `data/typologies/${name}.xlsx`; }
-function layerFileToPath(name){ return `data/layers/${name}.xlsx`; }
+// Config routing
+function typologyFileToPath(name){
+  const ref = norm(name);
+  if(!ref) return "";
+  if(ref.endsWith(".xlsx")) return `data/typologies/${ref}`;
+  return `data/typologies/${ref}.xlsx`;
+}
+function layerFileToPath(name){
+  const ref = norm(name);
+  if(!ref) return "";
+  if(ref.endsWith(".xlsx")) return `data/layers/${ref}`;
+  return `data/layers/${ref}.xlsx`;
+}
 
 async function loadConfig(){
   const res = await fetch("data/config.json");
@@ -110,9 +159,10 @@ async function loadConfig(){
   STATE.config = await res.json();
 }
 
+// Typologies
 function typologyOptions(){
-  const cfg = STATE.config?.typologies ? Object.keys(STATE.config.typologies) : [];
-  return cfg.length ? cfg : ["1.Bomen","2.Haagplanten","3.wadi","4.bloemenweide","5.inheemse_planten","6.gevelgroen","7.grasland_weide","9.fruit_groenten_kruiden"];
+  const typs = STATE.config?.typologies ? Object.keys(STATE.config.typologies) : [];
+  return typs.length ? typs : ["1.Bomen","2.Haagplanten","3.wadi","4.bloemenweide","5.inheemse_planten","6.gevelgroen","7.grasland_weide","9.fruit_groenten_kruiden"];
 }
 function subtypeOptions(typ){
   const node = STATE.config?.typologies?.[typ];
@@ -124,10 +174,11 @@ function filesForTypology(typ, subtype){
   if(!node) return [];
   const keys = Object.keys(node.subtypes || {});
   const chosen = keys.includes(subtype) ? subtype : (keys[0] || "Alle");
-  const refs = node.subtypes?.[chosen] ?? [];
-  return (refs ?? []).map(norm).filter(Boolean).map(typologyFileToPath);
+  const arr = node.subtypes?.[chosen] ?? [];
+  return (arr ?? []).map(norm).filter(Boolean).map(typologyFileToPath);
 }
 
+// Layers
 function districtToFilename(d){
   const cleaned = norm(d).replaceAll("/", "_").replaceAll(".", "");
   return cleaned.split(" ").join("_");
@@ -143,40 +194,34 @@ function layerFiles(layerKey, typ){
     return [layerFileToPath(`bobo_regio/BOBO_${code}`)];
   }
   if(layerKey==="fyto"){
-    const refs = (STATE.config?.layers?.fytoremediatie?.[typ] ?? []).map(norm).filter(Boolean);
-    return refs.map(layerFileToPath);
+    const arr = STATE.config?.layers?.fytoremediatie?.[typ] || [];
+    return (arr ?? []).map(norm).filter(Boolean).map(layerFileToPath);
   }
   const keyMap = { klimaat:"klimaatbomenlijst", amber:"amberlijst" };
-  const refs = (STATE.config?.layers?.[keyMap[layerKey]] ?? []).map(norm).filter(Boolean);
-  return refs.map(layerFileToPath);
+  const arr = STATE.config?.layers?.[keyMap[layerKey]] || [];
+  return (arr ?? []).map(norm).filter(Boolean).map(layerFileToPath);
 }
 
-function rowLatin(row){
-  return norm(row["Latijnse naam"] || row["Latijnse naam "] || row["latijnse naam"] || row["LatijnseNaam"] || row["latin"] || row["Soort"] || "");
-}
-function rowDutch(row){
-  return norm(row["Nederlandse naam"] || row["Nederlandse naam "] || row["nederlandse naam"] || row["NederlandseNaam"] || row["dutch"] || "");
-}
+// Plant objects
 const BASE_FILTER_KEYS = new Set(["kenmerk_bodemtype","kenmerk_bodemvochtigheid","kenmerk_zuurtegraad","kenmerk_verspreiding"]);
-
 function plantFromRow(row){
-  const latin=rowLatin(row);
-  const dutch=rowDutch(row);
-  const traits={
+  const latin = rowLatin(row);
+  const dutch = rowDutch(row);
+  const traits = {
     bodemtype: splitList(row["kenmerk_bodemtype"]),
     bodemvocht: splitList(row["kenmerk_bodemvochtigheid"]),
     zuur: splitList(row["kenmerk_zuurtegraad"]),
     verspreiding: splitList(row["kenmerk_verspreiding"]),
   };
-  const dynamic=new Map();
+  const dynamic = new Map();
   for(const [k,v] of Object.entries(row)){
-    const kk=norm(k).toLowerCase();
+    const kk = norm(k).toLowerCase();
     if(!kk.startsWith("kenmerk_")) continue;
     if(BASE_FILTER_KEYS.has(kk)) continue;
-    const vals=splitList(v);
+    const vals = splitList(v);
     if(vals.length) dynamic.set(kk, vals);
   }
-  const fotoIds=splitPipesRaw(row["foto_ids"] || row["foto_id"] || row["foto"] || "");
+  const fotoIds = splitPipesRaw(row["foto_ids"] || row["foto_id"] || row["foto"] || "");
   return {
     latin, dutch,
     traits, dynamic,
@@ -190,7 +235,7 @@ function plantFromRow(row){
 
 async function loadTypologyPlants(typ, subtype){
   const files = filesForTypology(typ, subtype);
-  const all=[];
+  const all = [];
   for(const file of files){
     if(STATE.loaded.typology.has(file)){
       all.push(...STATE.loaded.typology.get(file));
@@ -203,52 +248,57 @@ async function loadTypologyPlants(typ, subtype){
     STATE.loaded.typology.set(file, plants);
     all.push(...plants);
   }
-  const merged=new Map();
+  const merged = new Map();
   for(const p of all){
-    const k=keyLatin(p.latin);
-    if(!merged.has(k)) merged.set(k,p);
+    const k = keyLatin(p.latin);
+    if(!merged.has(k)) merged.set(k, p);
     else{
-      const ex=merged.get(k);
+      const ex = merged.get(k);
       if(!ex.dutch && p.dutch) ex.dutch=p.dutch;
-      ex.traits.bodemtype=uniqSorted([...ex.traits.bodemtype,...p.traits.bodemtype]);
-      ex.traits.bodemvocht=uniqSorted([...ex.traits.bodemvocht,...p.traits.bodemvocht]);
-      ex.traits.zuur=uniqSorted([...ex.traits.zuur,...p.traits.zuur]);
-      ex.traits.verspreiding=uniqSorted([...ex.traits.verspreiding,...p.traits.verspreiding]);
+      ex.traits.bodemtype = uniqSorted([...ex.traits.bodemtype, ...p.traits.bodemtype]);
+      ex.traits.bodemvocht = uniqSorted([...ex.traits.bodemvocht, ...p.traits.bodemvocht]);
+      ex.traits.zuur = uniqSorted([...ex.traits.zuur, ...p.traits.zuur]);
+      ex.traits.verspreiding = uniqSorted([...ex.traits.verspreiding, ...p.traits.verspreiding]);
       ex.fotoIds = Array.from(new Set([...(ex.fotoIds||[]), ...(p.fotoIds||[])]));
-      for(const [k2,v2] of Object.entries(p.raw||{})){
-        if(ex.raw[k2]===undefined || ex.raw[k2]==="") ex.raw[k2]=v2;
+      for(const [dk, vals] of p.dynamic.entries()){
+        const cur = ex.dynamic.get(dk) || [];
+        ex.dynamic.set(dk, uniqSorted([...cur, ...vals]));
       }
     }
   }
   return Array.from(merged.values());
 }
 
-async function loadLayerIndexOne(filePath, sheetName){
-  const key = `${filePath}|${sheetName||"AUTO"}`;
-  if(STATE.loaded.layerIndex.has(key)) return STATE.loaded.layerIndex.get(key);
+async function loadLayerIndex(filePath, sheetPicker){
+  const sheetKey = sheetPicker ? "custom" : "auto";
+  const key = `${filePath}|${sheetKey}|${STATE.selected.fytoMedium}|${STATE.selected.fytoPollutant}`;
+  if(STATE.loaded.layer.has(key)) return STATE.loaded.layer.get(key);
+
   const wb = await fetchXlsx(filePath);
-  const sheet = sheetName || pickBestSheetName(wb);
-  const rows = sheetToJson(wb, sheet);
-  const idx=new Map();
+  const sheetName = sheetPicker ? sheetPicker(wb) : pickBestSheetName(wb);
+  const rows = sheetToJson(wb, sheetName);
+
+  const idx = new Map();
   for(const r of rows){
-    const latin=rowLatin(r);
-    const dutch=rowDutch(r);
+    const latin = rowLatin(r);
+    const dutch = rowDutch(r);
     if(latin) idx.set(keyLatin(latin), r);
     if(dutch) idx.set(keyDutch(dutch), r);
   }
-  STATE.loaded.layerIndex.set(key, idx);
+  STATE.loaded.layer.set(key, idx);
   return idx;
 }
 function matchLayerRow(idx, plant){
-  const k1=keyLatin(plant.latin);
+  const k1 = keyLatin(plant.latin);
   if(idx.has(k1)) return idx.get(k1);
   if(plant.dutch){
-    const k2=keyDutch(plant.dutch);
+    const k2 = keyDutch(plant.dutch);
     if(idx.has(k2)) return idx.get(k2);
   }
   return null;
 }
 
+// Filters
 function computeBaseFilterOptions(plants){
   const soils=[], moist=[], acid=[], spread=[];
   for(const p of plants){
@@ -259,39 +309,17 @@ function computeBaseFilterOptions(plants){
   }
   return { soil: uniqSorted(soils), moist: uniqSorted(moist), acid: uniqSorted(acid), spread: uniqSorted(spread) };
 }
-function fillSelect(selectEl, values, includeAll=true, allLabel="Alle"){
-  if(!selectEl) return;
-  const prev=selectEl.value;
-  selectEl.innerHTML="";
-  const add=(v,t)=>{ const o=document.createElement("option"); o.value=v; o.textContent=t ?? v; selectEl.appendChild(o); };
-  if(includeAll) add("ALLE", allLabel);
-  for(const v of values) add(v,v);
-  const cand = prev || (includeAll ? "ALLE" : (values[0]||""));
-  if(Array.from(selectEl.options).some(o=>o.value===cand)) selectEl.value=cand;
-}
-function fillSelectWithLabels(selectEl, values, labelsMap){
-  if(!selectEl) return;
-  const prev=selectEl.value;
-  selectEl.innerHTML="";
-  for(const v of values){
-    const o=document.createElement("option");
-    o.value=v;
-    o.textContent = (labelsMap && labelsMap[v]) ? labelsMap[v] : v;
-    selectEl.appendChild(o);
-  }
-  if(prev && Array.from(selectEl.options).some(o=>o.value===prev)) selectEl.value=prev;
-}
-
-function matchesAll(p){
+function matchesBase(p){
   const st=STATE.selected.soilType.toLowerCase();
   const sm=STATE.selected.soilMoisture.toLowerCase();
   const ac=STATE.selected.acidity.toLowerCase();
   const sp=STATE.selected.spread.toLowerCase();
-  if(!((st==="alle")||p.traits.bodemtype.includes(st))) return false;
-  if(!((sm==="alle")||p.traits.bodemvocht.includes(sm))) return false;
-  if(!((ac==="alle")||p.traits.zuur.includes(ac))) return false;
-  if(!((sp==="alle")||p.traits.verspreiding.includes(sp))) return false;
-  if(STATE.selected.layers.regionaal && STATE.selected.regionMode==="filter" && !p.layers.regionaal) return false;
+  const ok = (st==="alle"||p.traits.bodemtype.includes(st)) &&
+             (sm==="alle"||p.traits.bodemvocht.includes(sm)) &&
+             (ac==="alle"||p.traits.zuur.includes(ac)) &&
+             (sp==="alle"||p.traits.verspreiding.includes(sp));
+  if(!ok) return false;
+
   const q=(STATE.selected.globalSearch||"").trim().toLowerCase();
   if(q){
     const blob = `${p.latin} ${p.dutch||""} ${Object.values(p.raw||{}).map(v=>norm(v)).join(" ")}`.toLowerCase();
@@ -299,6 +327,13 @@ function matchesAll(p){
   }
   return true;
 }
+function matchesRegionMode(p){
+  if(!STATE.selected.layers.regionaal) return true;
+  if(STATE.selected.regionMode!=="filter") return true;
+  return p.layers.regionaal===true;
+}
+function matchesAll(p){ return matchesBase(p) && matchesRegionMode(p); }
+
 function badgesForPlant(p){
   const b=[];
   if(p.layers.klimaat) b.push("Klimaat");
@@ -315,6 +350,7 @@ function pickAny(row, keys){
   return "";
 }
 
+// Fyto columns
 function buildFytoColumns(){
   STATE.table.extraCols = [
     { label:"Comments on phytoremedial effectiveness", getter:(p)=>pickAny(p.fytoRow,["Comments on phytoremedial effectiveness","Comments"]) },
@@ -332,53 +368,49 @@ async function applyLayers(){
     p.fytoRow=null;
   }
   clearExtraCols();
-  const typ=STATE.selected.typology;
+  const typ = STATE.selected.typology;
 
   if(STATE.selected.layers.klimaat){
     for(const file of layerFiles("klimaat", typ)){
-      const idx = await loadLayerIndexOne(file);
+      const idx = await loadLayerIndex(file);
       for(const p of STATE.plants) if(matchLayerRow(idx,p)) p.layers.klimaat=true;
     }
   }
   if(STATE.selected.layers.amber){
     for(const file of layerFiles("amber", typ)){
-      const idx = await loadLayerIndexOne(file);
+      const idx = await loadLayerIndex(file);
       for(const p of STATE.plants) if(matchLayerRow(idx,p)) p.layers.amber=true;
     }
   }
   if(STATE.selected.layers.regionaal){
     for(const file of layerFiles("regionaal", typ)){
-      const idx = await loadLayerIndexOne(file);
+      const idx = await loadLayerIndex(file);
       for(const p of STATE.plants) if(matchLayerRow(idx,p)) p.layers.regionaal=true;
     }
   }
   if(STATE.selected.layers.bobo){
-    const code=(STATE.selected.boboCode||"").trim();
+    const code = (STATE.selected.boboCode||"").trim();
     if(code && code!=="ALLE"){
       for(const file of layerFiles("bobo", typ)){
-        const idx = await loadLayerIndexOne(file);
+        const idx = await loadLayerIndex(file);
         for(const p of STATE.plants){
-          if(matchLayerRow(idx,p)){ p.layers.bobo=true; p.boboCode=code; }
+          if(matchLayerRow(idx,p)){
+            p.layers.bobo=true;
+            p.boboCode=code;
+          }
         }
       }
     }
   }
   if(STATE.selected.layers.fyto){
     const files = layerFiles("fyto", typ);
-    const idxAll=new Map();
+    const idxAll = new Map();
     for(const file of files){
-      const wb = await fetchXlsx(file);
-      const sheet = pickFytoSheetName(wb);
-      const rows = sheetToJson(wb, sheet);
-      for(const r of rows){
-        const latin=rowLatin(r);
-        const dutch=rowDutch(r);
-        if(latin) idxAll.set(keyLatin(latin), r);
-        if(dutch) idxAll.set(keyDutch(dutch), r);
-      }
+      const idx = await loadLayerIndex(file, pickFytoSummarySheet);
+      for(const [k,v] of idx.entries()) idxAll.set(k,v);
     }
     for(const p of STATE.plants){
-      const row=matchLayerRow(idxAll,p);
+      const row = matchLayerRow(idxAll, p);
       if(!row) continue;
       p.layers.fyto=true;
       p.fytoRow=row;
@@ -387,31 +419,38 @@ async function applyLayers(){
   }
 }
 
+// Render
 function rebuildTableHeader(){
-  const thead=$("#results thead"); if(!thead) return;
+  const thead = $("#results thead");
+  if(!thead) return;
   const base=["Latijnse naam","Nederlandse naam","Bodemtype","Vocht","pH","Lagen"];
   const cols=[...base, ...STATE.table.extraCols.map(c=>c.label)];
   thead.innerHTML = `<tr>${cols.map(h=>`<th>${h}</th>`).join("")}</tr>`;
 }
 function render(){
   rebuildTableHeader();
-  const tbody=$("#results tbody"); if(!tbody) return;
+  const tbody=$("#results tbody");
+  if(!tbody) return;
   tbody.innerHTML="";
   const filtered = STATE.plants.filter(matchesAll);
   setMeta(`${filtered.length} resultaten`);
+
   for(const p of filtered){
     const tr=document.createElement("tr");
-    tr.innerHTML = `
-      <td>${p.latin}</td>
-      <td class="dutchCell">${p.dutch||"—"}</td>
-      <td>${(p.traits.bodemtype||[]).join(", ")||"—"}</td>
-      <td>${(p.traits.bodemvocht||[]).join(", ")||"—"}</td>
-      <td>${(p.traits.zuur||[]).join(", ")||"—"}</td>
-      <td></td>
-      ${STATE.table.extraCols.map(()=>"<td></td>").join("")}
-    `;
-    // badges + extra cols
-    const badgeTd = tr.children[5];
+
+    const tdL=document.createElement("td"); tdL.textContent=p.latin; tr.appendChild(tdL);
+
+    const tdN=document.createElement("td");
+    tdN.textContent=p.dutch||"—";
+    tdN.className="dutchCell";
+    tdN.addEventListener("click",(e)=>{ e.stopPropagation(); openDrawer(p); });
+    tr.appendChild(tdN);
+
+    const tdS=document.createElement("td"); tdS.textContent=(p.traits.bodemtype||[]).join(", ")||"—"; tr.appendChild(tdS);
+    const tdM=document.createElement("td"); tdM.textContent=(p.traits.bodemvocht||[]).join(", ")||"—"; tr.appendChild(tdM);
+    const tdP=document.createElement("td"); tdP.textContent=(p.traits.zuur||[]).join(", ")||"—"; tr.appendChild(tdP);
+
+    const tdB=document.createElement("td");
     const wrap=document.createElement("div"); wrap.className="badges";
     for(const b of badgesForPlant(p)){
       const s=document.createElement("span"); s.className="badge ok"; s.textContent=b; wrap.appendChild(s);
@@ -419,38 +458,34 @@ function render(){
     if(p.layers.bobo && p.boboCode){
       const s=document.createElement("span"); s.className="badge"; s.textContent=p.boboCode; wrap.appendChild(s);
     }
-    badgeTd.appendChild(wrap);
+    tdB.appendChild(wrap);
+    tr.appendChild(tdB);
 
-    for(let i=0;i<STATE.table.extraCols.length;i++){
-      const td = tr.children[6+i];
-      const v = STATE.table.extraCols[i].getter(p);
+    for(const c of STATE.table.extraCols){
+      const td=document.createElement("td");
+      const v=c.getter(p);
       td.textContent = v || "—";
+      tr.appendChild(td);
     }
 
     tr.addEventListener("click", ()=>openDrawer(p));
-    tr.querySelector(".dutchCell")?.addEventListener("click",(e)=>{ e.stopPropagation(); openDrawer(p); });
     tbody.appendChild(tr);
   }
 }
 
-// CSV utilities
-function csvEscape(v){ return `"${String(v??"").replaceAll('"','""')}"`; }
+// CSV export
 function toCsv(rows){
+  const esc=(v)=>`"${String(v??"").replaceAll('"','""')}"`;
   const headers=["Latijnse naam","Nederlandse naam","Bodemtype","Vocht","pH","Verspreiding","Lagen", ...STATE.table.extraCols.map(c=>c.label)];
   return [
-    headers.map(csvEscape).join(","),
+    headers.map(esc).join(","),
     ...rows.map(p=>{
       const layers=badgesForPlant(p).join("|");
       const base=[p.latin,p.dutch,(p.traits.bodemtype||[]).join("|"),(p.traits.bodemvocht||[]).join("|"),(p.traits.zuur||[]).join("|"),(p.traits.verspreiding||[]).join("|"),layers];
       const extras=STATE.table.extraCols.map(c=>c.getter(p) ?? "");
-      return [...base,...extras].map(csvEscape).join(",");
+      return [...base,...extras].map(esc).join(",");
     })
   ].join("\n");
-}
-function rowsToCsv(rows){
-  if(!rows || !rows.length) return "";
-  const headers = Object.keys(rows[0]);
-  return [headers.map(csvEscape).join(","), ...rows.map(r=>headers.map(h=>csvEscape(r[h])).join(","))].join("\n");
 }
 function downloadText(filename,text){
   const blob=new Blob([text],{type:"text/plain;charset=utf-8"});
@@ -460,7 +495,7 @@ function downloadText(filename,text){
   setTimeout(()=>URL.revokeObjectURL(url),250);
 }
 
-// Drawer: images
+// Drawer (images + fyto detail)
 function urlForFotoId(id, ext){ return `${IMAGE_BASE_URL}/${id}.${ext}`; }
 function loadImage(url){
   return new Promise((resolve,reject)=>{
@@ -475,14 +510,12 @@ async function resolveFotoUrls(ids, max=60){
   for(const id of ids){
     let ok=null;
     try{ ok=await loadImage(urlForFotoId(id,"jpg")); }
-    catch{ try{ ok=await loadImage(urlForFotoId(id,"png")); }catch{ ok=null; } }
-    if(ok){ out.push(ok);
-      if(out.length>=max) break; }
+    catch{ try{ ok=await loadImage(urlForFotoId(id,"png")); } catch{ ok=null; } }
+    if(ok){ out.push(ok); if(out.length>=max) break; }
   }
   return out;
 }
 
-// FYTO detail helpers
 function fytoBaseNameForTypology(typ){
   const arr = STATE.config?.layers?.fytoremediatie?.[typ] || [];
   const first = Array.isArray(arr) ? (arr[0] || "") : "";
@@ -491,81 +524,22 @@ function fytoBaseNameForTypology(typ){
 }
 function buildFytoDetailPath(typ){
   const base = fytoBaseNameForTypology(typ);
-  const med = (STATE.selected.fytoMedium || "bodemwater").toString();
-  const pol = (STATE.selected.fytoPollutant || "PFAS").toString();
+  const med = STATE.selected.fytoMedium || "bodemwater";
+  const pol = STATE.selected.fytoPollutant || "PFAS";
   return `data/layers/fytoremediatie/detail/${base}_${med}_${pol}_detail.xlsx`;
 }
 function stringifyRow(row){ return Object.values(row).map(v=>norm(v)).join(" ").toLowerCase(); }
-
-function renderEcofloraDetails(plant){
-  const tbody = $("#ecoTable tbody");
-  if(!tbody) return;
-  tbody.innerHTML = "";
-  const entries = Object.entries(plant.raw || {})
-    .filter(([k,v])=>norm(k)!=="" && norm(v)!=="")
-    .sort((a,b)=>a[0].localeCompare(b[0]));
-  for(const [k,v] of entries){
-    const tr=document.createElement("tr");
-    const tdK=document.createElement("td"); tdK.textContent=norm(k); tr.appendChild(tdK);
-    const tdV=document.createElement("td"); tdV.textContent=norm(v); tr.appendChild(tdV);
-    tbody.appendChild(tr);
-  }
-}
-
-async function loadPlantFytoDetailRows(plant){
-  const path = buildFytoDetailPath(STATE.selected.typology);
-  let all = STATE.loaded.fytoDetail.get(path);
-  if(!all){
-    const wb = await fetchXlsx(path);
-    const sheet = pickBestSheetName(wb);
-    all = sheetToJson(wb, sheet);
-    STATE.loaded.fytoDetail.set(path, all);
-  }
-  const latin = keyLatin(plant.latin);
-  const dutch = keyLatin(plant.dutch || "");
-  return all.filter(r=>{
-    const rLat = keyLatin(rowLatin(r));
-    const rDu = keyLatin(rowDutch(r));
-    return (rLat && rLat===latin) || (rDu && rDu===dutch);
-  });
-}
-
-async function renderFytoDetail(plant){
-  const detailBox=$("#fytoDetailBox");
-  const dtHead=$("#fytoDetailTable thead");
-  const dtBody=$("#fytoDetailTable tbody");
-  const meta=$("#fytoDetailMeta");
-  const q = ($("#fytoDetailSearch")?.value || "").trim().toLowerCase();
-  if(!detailBox || !dtHead || !dtBody) return {all:[], filtered:[]};
-
-  const allRows = await loadPlantFytoDetailRows(plant);
-  const filtered = q ? allRows.filter(r=>stringifyRow(r).includes(q)) : allRows;
-
-  if(meta){
-    meta.textContent = `${filtered.length} / ${allRows.length} studies (${buildFytoDetailPath(STATE.selected.typology).split("/").pop()})`;
-  }
-
-  dtHead.innerHTML=""; dtBody.innerHTML="";
-  if(filtered.length===0){
-    dtBody.innerHTML = `<tr><td style="padding:10px">Geen detailrecords gevonden.</td></tr>`;
-    return {all:allRows, filtered};
-  }
-  const headers = Object.keys(filtered[0]);
-  dtHead.innerHTML = `<tr>${headers.map(h=>`<th>${h}</th>`).join("")}</tr>`;
-  for(const r of filtered){
-    const tr=document.createElement("tr");
-    for(const h of headers){
-      const td=document.createElement("td");
-      td.textContent = norm(r[h]);
-      tr.appendChild(td);
-    }
-    dtBody.appendChild(tr);
-  }
-  return {all:allRows, filtered};
+function rowsToCsv(rows){
+  if(!rows || !rows.length) return "";
+  const headers = Object.keys(rows[0]);
+  const esc=(v)=>`"${String(v??"").replaceAll('"','""')}"`;
+  return [headers.map(esc).join(","), ...rows.map(r=>headers.map(h=>esc(r[h])).join(","))].join("\n");
 }
 
 function openDrawer(plant){
-  const drawer=$("#detailDrawer"); if(!drawer) return;
+  const drawer=$("#detailDrawer");
+  if(!drawer) return;
+
   STATE.ui.currentPlantKey = keyLatin(plant.latin);
 
   $("#drawerTitle").textContent = plant.latin;
@@ -575,16 +549,7 @@ function openDrawer(plant){
   $("#drawerPh").textContent = (plant.traits.zuur||[]).join(", ") || "—";
   $("#drawerSpread").textContent = (plant.traits.verspreiding||[]).join(", ") || "—";
 
-  // Ecoflora details table
-  renderEcofloraDetails(plant);
-  const ecoWrap=$("#ecoTableWrap");
-  if(ecoWrap) ecoWrap.style.display="none";
-  $("#ecoToggleBtn")?.addEventListener("click", ()=>{
-    if(!ecoWrap) return;
-    ecoWrap.style.display = ecoWrap.style.display==="none" ? "block" : "none";
-  });
-
-  // FYTO summary fields
+  // fyto summary
   const fytoBox=$("#drawerFyto");
   if(STATE.selected.layers.fyto && plant.fytoRow){
     fytoBox.style.display="block";
@@ -594,53 +559,6 @@ function openDrawer(plant){
   }else{
     fytoBox.style.display="none";
   }
-
-  // Reset detail box
-  const detailBox=$("#fytoDetailBox"); if(detailBox) detailBox.style.display="none";
-  const meta=$("#fytoDetailMeta"); if(meta) meta.textContent="";
-  const dtHead=$("#fytoDetailTable thead"); if(dtHead) dtHead.innerHTML="";
-  const dtBody=$("#fytoDetailTable tbody"); if(dtBody) dtBody.innerHTML="";
-  const search=$("#fytoDetailSearch"); if(search) search.value="";
-
-  // Wire "Meer details"
-  const moreBtn=$("#fytoMoreBtn");
-  if(moreBtn){
-    moreBtn.onclick = async ()=>{
-      if(!detailBox) return;
-      const open = detailBox.style.display==="none";
-      detailBox.style.display = open ? "block" : "none";
-      if(open){
-        try{ await renderFytoDetail(plant); }
-        catch(e){ if(meta) meta.textContent="Detailbestand niet gevonden of niet leesbaar."; }
-      }
-    };
-  }
-  $("#fytoDetailSearch")?.addEventListener("input", async ()=>{
-    if(detailBox && detailBox.style.display!=="none"){
-      try{ await renderFytoDetail(plant); }catch(e){}
-    }
-  });
-  $("#fytoDetailCsvBtn")?.addEventListener("click", async ()=>{
-    try{
-      const {filtered} = await renderFytoDetail(plant);
-      downloadText(`fyto_detail_${plant.latin}.csv`, rowsToCsv(filtered));
-    }catch(e){ if(meta) meta.textContent="Kan detail CSV niet exporteren."; }
-  });
-  $("#fytoExtendedCsvBtn")?.addEventListener("click", async ()=>{
-    try{
-      const {all} = await renderFytoDetail(plant);
-      const summary = Object.assign({}, plant.raw || {});
-      summary["Latijnse naam"]=plant.latin;
-      summary["Nederlandse naam"]=plant.dutch||"";
-      summary["FYTO_pollutant"]=STATE.selected.fytoPollutant;
-      summary["FYTO_medium"]=STATE.selected.fytoMedium;
-      summary["FYTO_comments"]=$("#fytoComments")?.textContent || "";
-      summary["FYTO_site"]=$("#fytoSite")?.textContent || "";
-      summary["FYTO_reference"]=$("#fytoRef")?.textContent || "";
-      const combo = rowsToCsv([summary]) + "\n\nFYTO_DETAIL\n" + rowsToCsv(all);
-      downloadText(`extended_${plant.latin}.csv`, combo);
-    }catch(e){ if(meta) meta.textContent="Kan extended CSV niet exporteren."; }
-  });
 
   // Images
   const imgHost=$("#drawerImages");
@@ -652,12 +570,15 @@ function openDrawer(plant){
     }else{
       resolveFotoUrls(ids, 60).then(urls=>{
         if(STATE.ui.currentPlantKey !== keyLatin(plant.latin)) return;
-        if(!urls.length){ imgHost.innerHTML = `<div class="hint">Geen foto's gevonden.</div>`; return; }
+        if(!urls.length){
+          imgHost.innerHTML = `<div class="hint">Geen foto’s gevonden.</div>`;
+          return;
+        }
         let idx=0;
         const renderCarousel=()=>{
           imgHost.innerHTML = `
             <div class="carousel">
-              <img class="carouselMain" src="${urls[idx]}" alt="foto ${idx+1}">
+              <img class="carouselMain" src="${urls[idx]}" alt="foto">
               <button class="carouselBtn prev" id="carouselPrev" aria-label="vorige">‹</button>
               <button class="carouselBtn next" id="carouselNext" aria-label="volgende">›</button>
               <div class="carouselCounter">${idx+1} / ${urls.length}</div>
@@ -674,20 +595,22 @@ function openDrawer(plant){
   drawer.setAttribute("aria-hidden","false");
 }
 function closeDrawer(){
-  const drawer=$("#detailDrawer"); if(!drawer) return;
+  const drawer=$("#detailDrawer");
+  if(!drawer) return;
   drawer.classList.remove("open");
   drawer.setAttribute("aria-hidden","true");
-  const imgHost=$("#drawerImages"); if(imgHost) imgHost.innerHTML="";
 }
 
 async function loadTypologyAndRender(){
   setMeta("Laden…");
   STATE.plants = await loadTypologyPlants(STATE.selected.typology, STATE.selected.subtype);
+
   const opts = computeBaseFilterOptions(STATE.plants);
   fillSelect($("#soilType"), opts.soil, true);
   fillSelect($("#soilMoisture"), opts.moist, true);
   fillSelect($("#acidity"), opts.acid, true);
   fillSelect($("#spread"), opts.spread, true);
+
   await applyLayers();
   render();
 }
@@ -697,20 +620,26 @@ function wire(){
   window.addEventListener("keydown",(e)=>{ if(e.key==="Escape") closeDrawer(); });
 
   $("#typology")?.addEventListener("change", async (e)=>{
-    STATE.selected.typology=e.target.value;
-    const subs=subtypeOptions(STATE.selected.typology);
-    const subSel=$("#subtype");
+    STATE.selected.typology = e.target.value;
+    const subs = subtypeOptions(STATE.selected.typology);
+    const subSel = $("#subtype");
     subSel.innerHTML="";
     for(const s of subs){ const o=document.createElement("option"); o.value=s; o.textContent=s; subSel.appendChild(o); }
-    STATE.selected.subtype=subs[0]; subSel.value=STATE.selected.subtype;
+    STATE.selected.subtype = subs[0];
+    subSel.value = STATE.selected.subtype;
     await loadTypologyAndRender();
   });
-  $("#subtype")?.addEventListener("change", async (e)=>{ STATE.selected.subtype=e.target.value; await loadTypologyAndRender(); });
+
+  $("#subtype")?.addEventListener("change", async (e)=>{
+    STATE.selected.subtype = e.target.value;
+    await loadTypologyAndRender();
+  });
 
   $("#soilType")?.addEventListener("change",(e)=>{ STATE.selected.soilType=e.target.value; render(); });
   $("#soilMoisture")?.addEventListener("change",(e)=>{ STATE.selected.soilMoisture=e.target.value; render(); });
   $("#acidity")?.addEventListener("change",(e)=>{ STATE.selected.acidity=e.target.value; render(); });
   $("#spread")?.addEventListener("change",(e)=>{ STATE.selected.spread=e.target.value; render(); });
+
   $("#globalSearch")?.addEventListener("input",(e)=>{ STATE.selected.globalSearch=e.target.value||""; render(); });
 
   $("#layer_klimaat")?.addEventListener("change", async (e)=>{ STATE.selected.layers.klimaat=e.target.checked; await applyLayers(); render(); });
@@ -722,8 +651,9 @@ function wire(){
     await applyLayers(); render();
   });
   $("#district")?.addEventListener("change", async (e)=>{ STATE.selected.district=e.target.value; await applyLayers(); render(); });
-  $("#regionModePaint")?.addEventListener("change", ()=>{ if($("#regionModePaint")?.checked){ STATE.selected.regionMode="paint"; render(); } });
-  $("#regionModeFilter")?.addEventListener("change", ()=>{ if($("#regionModeFilter")?.checked){ STATE.selected.regionMode="filter"; render(); } });
+
+  $("#regionModePaint")?.addEventListener("change", ()=>{ if($("#regionModePaint").checked){ STATE.selected.regionMode="paint"; render(); } });
+  $("#regionModeFilter")?.addEventListener("change", ()=>{ if($("#regionModeFilter").checked){ STATE.selected.regionMode="filter"; render(); } });
 
   $("#layer_bobo")?.addEventListener("change", async (e)=>{
     STATE.selected.layers.bobo=e.target.checked;
@@ -737,30 +667,43 @@ function wire(){
     const wrap=$("#fytoWrap"); if(wrap) wrap.style.display = e.target.checked ? "grid" : "none";
     await applyLayers(); render();
   });
-  $("#fytoPollutant")?.addEventListener("change", async (e)=>{ STATE.selected.fytoPollutant=e.target.value; if(STATE.selected.layers.fyto){ await applyLayers(); render(); } });
-  $("#fytoMedium")?.addEventListener("change", async (e)=>{ STATE.selected.fytoMedium=e.target.value; if(STATE.selected.layers.fyto){ await applyLayers(); render(); } });
+  $("#fytoPollutant")?.addEventListener("change", async (e)=>{
+    STATE.selected.fytoPollutant=e.target.value;
+    if(STATE.selected.layers.fyto){ await applyLayers(); render(); }
+  });
+  $("#fytoMedium")?.addEventListener("change", async (e)=>{
+    STATE.selected.fytoMedium=e.target.value;
+    if(STATE.selected.layers.fyto){ await applyLayers(); render(); }
+  });
 
   $("#exportCsv")?.addEventListener("click", ()=>{
-    const filtered=STATE.plants.filter(matchesAll);
+    const filtered = STATE.plants.filter(matchesAll);
     downloadText(`planten_${STATE.selected.typology}_${STATE.selected.subtype}.csv`, toCsv(filtered));
   });
 }
 
 async function init(){
   try{
-    if(!window.XLSX){ setMeta("⚠️ XLSX library ontbreekt (check index.html script tag)."); return; }
+    if(!window.XLSX){
+      warnMeta("XLSX library ontbreekt (check index.html script tag).");
+      return;
+    }
     setMeta("Init…");
     await loadConfig();
 
-    const typSel=$("#typology"); typSel.innerHTML="";
-    const typs=typologyOptions();
+    const typSel=$("#typology");
+    typSel.innerHTML="";
+    const typs = typologyOptions();
     for(const t of typs){ const o=document.createElement("option"); o.value=t; o.textContent=t; typSel.appendChild(o); }
-    STATE.selected.typology=typs[0]; typSel.value=STATE.selected.typology;
+    STATE.selected.typology = typs[0];
+    typSel.value = STATE.selected.typology;
 
-    const subSel=$("#subtype"); subSel.innerHTML="";
-    const subs=subtypeOptions(STATE.selected.typology);
+    const subSel=$("#subtype");
+    subSel.innerHTML="";
+    const subs = subtypeOptions(STATE.selected.typology);
     for(const s of subs){ const o=document.createElement("option"); o.value=s; o.textContent=s; subSel.appendChild(o); }
-    STATE.selected.subtype=subs[0]; subSel.value=STATE.selected.subtype;
+    STATE.selected.subtype=subs[0];
+    subSel.value=STATE.selected.subtype;
 
     fillSelectWithLabels($("#fytoPollutant"), FYTO_POLLUTANTS, FYTO_POLLUTANT_LABELS);
     fillSelectWithLabels($("#fytoMedium"), FYTO_MEDIA, FYTO_MEDIA_LABELS);
@@ -769,6 +712,10 @@ async function init(){
 
     wire();
     await loadTypologyAndRender();
-  }catch(e){ logErr(e); }
+  }catch(e){
+    console.error(e);
+    warnMeta(e.message || "Onbekende fout");
+  }
 }
+
 window.addEventListener("DOMContentLoaded", init);
