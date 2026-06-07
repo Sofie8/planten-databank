@@ -615,17 +615,3 @@ details[open] .extra-title { margin-bottom: 10px; color: var(--text); }
 .right    { display: flex; gap: 10px; align-items: center; }
 details summary { cursor: pointer; }
 .pad { padding: 8px 2px; }
-/* Global search in results header */
-.resultsHeader{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-#globalSearch.input{flex:1;min-width:260px}
-
-/* Fyto detail UI */
-.fytoActions{margin-top:10px;display:flex;justify-content:flex-end}
-.fytoDetailBox{margin-top:10px;border:1px solid var(--line);border-radius:14px;padding:10px;background:rgba(255,255,255,.02)}
-.fytoDetailTop{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.fytoDetailTop .input{flex:1;min-width:220px}
-.fytoDetailBtns{display:flex;gap:8px;flex-wrap:wrap}
-.fytoDetailTableWrap{margin-top:10px;max-height:320px;overflow:auto;border:1px solid var(--line);border-radius:12px}
-.fytoDetailTable{width:100%;border-collapse:collapse;font-size:12px}
-.fytoDetailTable th,.fytoDetailTable td{border-bottom:1px solid var(--line);padding:8px;vertical-align:top}
-.fytoDetailTable th{position:sticky;top:0;background:#0b0f10;z-index:2}
