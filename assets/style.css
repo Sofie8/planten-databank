@@ -654,3 +654,52 @@ details summary { cursor: pointer; }
 .fytoDetailTable{width:100%;border-collapse:collapse;font-size:12px;background:var(--table-bg)}
 .fytoDetailTable th,.fytoDetailTable td{border-bottom:1px solid var(--line);padding:8px;vertical-align:top}
 .fytoDetailTable th{position:sticky;top:0;background:var(--table-head);z-index:2}
+
+
+/* FYTO detail row visibility fix */
+.fytoDetailTable{
+  display: table !important;
+  visibility: visible !important;
+  table-layout: auto;
+  width: max-content;
+  min-width: 100%;
+}
+.fytoDetailTable thead{
+  display: table-header-group !important;
+  visibility: visible !important;
+}
+.fytoDetailTable tbody{
+  display: table-row-group !important;
+  visibility: visible !important;
+}
+.fytoDetailTable tr{
+  display: table-row !important;
+  visibility: visible !important;
+  height: auto !important;
+}
+.fytoDetailTable th,
+.fytoDetailTable td{
+  display: table-cell !important;
+  visibility: visible !important;
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+  text-align: left;
+  min-width: 125px;
+  max-width: 340px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.fytoDetailTable tbody td{
+  color: #d6e8d8 !important;
+  background: #0c1410 !important;
+  font-size: 12px;
+  font-style: normal !important;
+  opacity: 1 !important;
+}
+.fytoDetailTable tbody tr:nth-child(even) td{
+  background: #0f1710 !important;
+}
+.fytoDetailTable tbody tr:hover td{
+  background: rgba(61,158,95,.10) !important;
+}
