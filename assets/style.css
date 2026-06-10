@@ -615,3 +615,42 @@ details[open] .extra-title { margin-bottom: 10px; color: var(--text); }
 .right    { display: flex; gap: 10px; align-items: center; }
 details summary { cursor: pointer; }
 .pad { padding: 8px 2px; }
+/* Results search (Zotero-like quick search) */
+.resultsSearch{
+  width: min(420px, 40vw);
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line2);
+  background: #0a1209;
+  color: var(--text);
+  outline: none;
+  font-size: 13px;
+}
+.resultsSearch:focus{
+  border-color: rgba(200,168,75,.7);
+  box-shadow: 0 0 0 3px rgba(200,168,75,.12);
+}
+@media (max-width: 700px){
+  .resultsSearch{ width: 100%; }
+}
+
+/* Ecoflora details box in drawer */
+.ecoBox{margin-top:14px;border:1px solid var(--line2);border-radius:14px;padding:10px;background:rgba(255,255,255,.015)}
+.ecoHead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.ecoTitle{font-weight:800;font-size:13px;color:var(--muted);letter-spacing:.3px;text-transform:uppercase}
+.ecoTableWrap{max-height:260px;overflow:auto;border:1px solid var(--line2);border-radius:12px}
+.ecoTable{width:100%;border-collapse:collapse;font-size:12px;background:var(--table-bg)}
+.ecoTable th,.ecoTable td{border-bottom:1px solid var(--line);padding:8px;vertical-align:top}
+.ecoTable th{position:sticky;top:0;background:var(--table-head);z-index:2}
+
+/* Fyto detail panel in drawer */
+.fytoActions{margin-top:10px;display:flex;justify-content:flex-end}
+.fytoDetailBox{margin-top:10px;border:1px solid var(--line2);border-radius:14px;padding:10px;background:rgba(255,255,255,.015)}
+.fytoDetailTop{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.fytoDetailSearch{flex:1;min-width:220px;padding:9px 12px;border-radius:10px;border:1px solid var(--line2);background:#0a1209;color:var(--text);outline:none}
+.fytoDetailSearch:focus{border-color: rgba(200,168,75,.7); box-shadow: 0 0 0 3px rgba(200,168,75,.12);}
+.fytoDetailBtns{display:flex;gap:8px;flex-wrap:wrap}
+.fytoDetailTableWrap{margin-top:10px;max-height:320px;overflow:auto;border:1px solid var(--line2);border-radius:12px}
+.fytoDetailTable{width:100%;border-collapse:collapse;font-size:12px;background:var(--table-bg)}
+.fytoDetailTable th,.fytoDetailTable td{border-bottom:1px solid var(--line);padding:8px;vertical-align:top}
+.fytoDetailTable th{position:sticky;top:0;background:var(--table-head);z-index:2}
