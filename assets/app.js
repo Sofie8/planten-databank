@@ -786,17 +786,42 @@ function openDrawer(plant) {
       return {all: allRows, filtered};
     }
 
-    const headers = Object.keys(filtered[0]);
-    dtHead.innerHTML = `<tr>${headers.map(h => `<th>${h}</th>`).join("")}</tr>`;
+    // Gebruik de unie van alle kolommen, zodat ook variabele studierijen volledig zichtbaar zijn.
+    const headers = Array.from(new Set(filtered.flatMap(r => Object.keys(r))));
+    const headerRow = document.createElement("tr");
+    for (const h of headers) {
+      const th = document.createElement("th");
+      th.textContent = h;
+      th.scope = "col";
+      headerRow.appendChild(th);
+    }
+    dtHead.appendChild(headerRow);
+
+    const fragment = document.createDocumentFragment();
     for (const r of filtered) {
       const tr = document.createElement("tr");
+      tr.className = "fytoStudyRow";
+
       for (const h of headers) {
         const td = document.createElement("td");
-        td.textContent = norm(r[h]);
+        const value = norm(r[h]);
+        td.textContent = value || "—";
+        td.dataset.column = h;
         tr.appendChild(td);
       }
-      dtBody.appendChild(tr);
+      fragment.appendChild(tr);
     }
+    dtBody.appendChild(fragment);
+
+    // Zorg dat de browser de rij meteen zichtbaar rendert.
+    const table = $("#fytoDetailTable");
+    if (table) {
+      table.style.display = "table";
+      table.style.visibility = "visible";
+    }
+    dtBody.style.display = "table-row-group";
+    dtBody.style.visibility = "visible";
+
     return {all: allRows, filtered};
   }
 
