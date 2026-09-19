@@ -52,8 +52,32 @@ function norm(s) {
   return String(s ?? "").replace(/\u00a0/g, " ").trim().replace(/\s+/g, " ");
 }
 
-function keyLatin(s) { return norm(s).toLowerCase(); }
-function keyDutch(s) { return "nl:" + norm(s).toLowerCase(); }
+function cleanKey(s) {
+  return norm(s)
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[×x]/g, "x")
+    .replace(/[’'`´"]/g, "")
+    .replace(/[(){}\[\].,;:!?/\\|_+\-–—]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function keyLatin(s) { return cleanKey(s); }
+function keyDutch(s) { return "nl:" + cleanKey(s); }
+
+// Extra robuuste match voor Latijnse namen:
+// "Betula pendula Roth", "Betula pendula var. ..." en "Betula pendula" worden hetzelfde.
+function latinBinomialKey(s) {
+  const parts = cleanKey(s)
+    .replace(/\b(spp|sp|subsp|ssp|var|f|cv|cultivar|agg|sl|s l)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(" ")
+    .filter(Boolean);
+  if (parts.length >= 2) return parts.slice(0, 2).join(" ");
+  return parts.join(" ");
+}
 
 function splitList(s) {
   const t = norm(s);
@@ -181,10 +205,18 @@ function layerFiles(layerKey, typology) {
     return [layerFileToPath(`regionale_soortenlijst/${districtToFilename(STATE.selected.district).replace(/\.xlsx$/i, "")}`)];
   }
   if (layerKey === "bobo") {
-    // BOBO files are per bodemcode, e.g. data/layers/bobo_regio/BOBO_zdg.xlsx
-    const code = (STATE.selected.boboCode || "").trim();
+    // BOBO files are per bodemcode, e.g. data/layers/bobo_regio/BOBO_zdg.xlsx.
+    // GitHub Pages is hoofdlettergevoelig: probeer daarom de courante varianten.
+    const code = norm(STATE.selected.boboCode);
     if (!code || code.toUpperCase() === "ALLE") return [];
-    return [layerFileToPath(`bobo_regio/BOBO_${code.toLowerCase()}`)];
+    const cLower = code.toLowerCase();
+    const cUpper = code.toUpperCase();
+    return [
+      layerFileToPath(`bobo_regio/BOBO_${cLower}`),
+      layerFileToPath(`bobo_regio/BOBO_${code}`),
+      layerFileToPath(`bobo_regio/BOBO_${cUpper}`),
+      layerFileToPath(`bobo_regio/bobo_${cLower}`)
+    ];
   }
   if (layerKey === "fyto") {
     const names = (STATE.config?.layers?.fytoremediatie?.[typology] ?? []).map(norm).filter(Boolean);
@@ -203,6 +235,11 @@ function rowLatin(row) {
     row["Latijnse naam "] ||
     row["latijnse naam"] ||
     row["LatijnseNaam"] ||
+    row["Wetenschappelijke naam"] ||
+    row["wetenschappelijke naam"] ||
+    row["Plant Scientific Name"] ||
+    row["Scientific name"] ||
+    row["scientific name"] ||
     row["latin"] ||
     ""
   );
@@ -214,6 +251,9 @@ function rowDutch(row) {
     row["Nederlandse naam "] ||
     row["nederlandse naam"] ||
     row["NederlandseNaam"] ||
+    row["Plant Common Name"] ||
+    row["Common name"] ||
+    row["common name"] ||
     row["dutch"] ||
     ""
   );
@@ -299,22 +339,40 @@ async function loadTypologyPlants(typology, subtype) {
 
 async function loadLayerIndex(files) {
   const out = new Map();
+  const failed = [];
   for (const file of files) {
     if (STATE.loaded.layers.has(file)) {
       for (const [k, v] of STATE.loaded.layers.get(file).entries()) out.set(k, v);
       continue;
     }
-    const wb = await fetchXlsx(file);
+
+    let wb;
+    try {
+      wb = await fetchXlsx(file);
+    } catch (err) {
+      failed.push(`${file} (${err.message || err})`);
+      continue; // probeer eventuele alternatieve bestandsnamen
+    }
+
     const rows = sheetToJson(wb, firstSheetName(wb));
     const map = new Map();
     for (const r of rows) {
       const latin = rowLatin(r);
       const dutch = rowDutch(r);
-      if (latin) map.set(keyLatin(latin), r);
+
+      if (latin) {
+        map.set(keyLatin(latin), r);
+        const bi = latinBinomialKey(latin);
+        if (bi) map.set(`latin2:${bi}`, r);
+      }
       if (dutch) map.set(keyDutch(dutch), r);
     }
     STATE.loaded.layers.set(file, map);
     for (const [k, v] of map.entries()) out.set(k, v);
+  }
+
+  if (!out.size && failed.length) {
+    console.warn("Geen layer matches geladen. Geprobeerde bestanden:", failed);
   }
   return out;
 }
@@ -463,6 +521,10 @@ function pickAny(row, keys) {
 function matchLayerRow(layerIndex, plant) {
   const k1 = keyLatin(plant.latin);
   if (layerIndex.has(k1)) return layerIndex.get(k1);
+
+  const bi = latinBinomialKey(plant.latin);
+  if (bi && layerIndex.has(`latin2:${bi}`)) return layerIndex.get(`latin2:${bi}`);
+
   if (plant.dutch) {
     const k2 = keyDutch(plant.dutch);
     if (layerIndex.has(k2)) return layerIndex.get(k2);
@@ -527,15 +589,18 @@ async function applyLayers() {
   }
 
   if (STATE.selected.layers.bobo) {
-    const code = (STATE.selected.boboCode || "").trim();
+    const code = norm(STATE.selected.boboCode);
     if (code && code.toUpperCase() !== "ALLE") {
       const idx = await loadLayerIndex(layerFiles("bobo", typ));
+      let matches = 0;
       for (const p of STATE.plants) {
         const row = matchLayerRow(idx, p);
         if (!row) continue;
         p.layers.bobo = true;
         p.boboCode = code;
+        matches++;
       }
+      console.info(`BOBO ${code}: ${matches} matches`);
     }
   }
 
