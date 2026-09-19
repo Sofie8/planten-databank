@@ -22,6 +22,12 @@
           <div class="subtitle">Botanische zoekmachine</div>
         </div>
       </div>
+
+      <div class="authorMeta" aria-label="Auteur en versie">
+        <div>gemaakt door <strong>Sofie Thijs</strong></div>
+        <div>Universiteit van Hasselt</div>
+        <div>versie: 08/09/2026</div>
+      </div>
     </div>
   </header>
 
@@ -70,6 +76,10 @@
         <div class="layer-title">7) Lagen "painten" (optioneel)</div>
         <div class="chips">
           <label class="chip">
+            <input type="checkbox" id="layer_genk" />
+            Genkse bedrijfszone
+          </label>
+          <label class="chip">
             <input type="checkbox" id="layer_klimaat" />
             Klimaatbomenlijst
           </label>
@@ -104,6 +114,24 @@
 
 
         <div class="grid" style="margin-top:12px;">
+
+          <!-- Genkse bedrijfszone -->
+          <div class="field" id="genkZoneWrap" style="display:none;">
+            <label for="genkZone">Bedrijventerreinen: zone</label>
+            <select id="genkZone"></select>
+            <div class="inline" style="margin-top:10px;">
+              <label class="radio">
+                <input type="radio" name="genkMode"
+                       id="genkModePaint" value="paint" checked>
+                Labelen
+              </label>
+              <label class="radio">
+                <input type="radio" name="genkMode"
+                       id="genkModeFilter" value="filter">
+                Alleen tonen
+              </label>
+            </div>
+          </div>
 
           <!-- Regionaal district -->
           <div class="field" id="districtWrap" style="display:none;">
@@ -143,7 +171,6 @@
     <section class="panel">
       <div class="resultsHeader">
         <div class="resultsMeta" id="resultsMeta">—</div>
-        <input id="globalSearch" type="search" placeholder="Zoek (bv. riet, Salix, PFAS, ...)" class="resultsSearch" />
         <button class="btn" id="exportCsv">Export CSV</button>
       </div>
       <div class="tableWrap">
@@ -200,21 +227,6 @@
         </div>
       </div>
 
-
-      <!-- Ecoflora details (alle kolommen uit typology-excel) -->
-      <div class="ecoBox" id="ecoDetailBox">
-        <div class="ecoHead">
-          <div class="ecoTitle">Ecoflora details</div>
-          <button class="btn ghost" id="ecoToggleBtn" type="button">Toon / verberg</button>
-        </div>
-        <div class="ecoTableWrap" id="ecoTableWrap" style="display:none;">
-          <table class="ecoTable" id="ecoTable">
-            <thead><tr><th>Kolom</th><th>Waarde</th></tr></thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-
       <!-- Fyto sectie -->
       <div class="fytoBox" id="drawerFyto" style="display:none;">
         <div class="fytoTitle">Fytoremediatie</div>
@@ -230,27 +242,6 @@
           <div class="k">Reference (author, year, doi)</div>
           <div class="v" id="fytoRef">—</div>
         </div>
-        <div class="fytoActions">
-          <button class="btn" id="fytoMoreBtn" type="button">Meer details</button>
-        </div>
-
-        <div class="fytoDetailBox" id="fytoDetailBox" style="display:none;">
-          <div class="fytoDetailTop">
-            <input id="fytoDetailSearch" class="fytoDetailSearch" type="search" placeholder="Zoek in studies (bv. PFOS hydroponics Europa)…" />
-            <div class="fytoDetailBtns">
-              <button class="btn" id="fytoDetailCsvBtn" type="button">Download detail CSV</button>
-              <button class="btn ghost" id="fytoExtendedCsvBtn" type="button">Download extended CSV</button>
-            </div>
-          </div>
-          <div class="hint" id="fytoDetailMeta"></div>
-          <div class="fytoDetailTableWrap">
-            <table class="fytoDetailTable" id="fytoDetailTable">
-              <thead></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
-
       </div>
 
     </div><!-- /drawerBody -->
@@ -258,6 +249,6 @@
 
   <!-- FIX #4: slechts één </body> en </html> -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="assets/app.js"></script>
+  <script src="assets/app.js?v=genk1"></script>
 </body>
 </html>
