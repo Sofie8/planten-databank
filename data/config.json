@@ -140,6 +140,13 @@
       "9.fruit_groenten_kruiden": [
         "fytoremediatie/Fytoremediatie_fruit_groenten_kruiden"
       ]
+    },
+    "genk_bedrijventerreinen": {
+      "Genk-Zuid": "genk_bedrijventerreinen/Genk-Zuid",
+      "Genk-Noord": "genk_bedrijventerreinen/Genk-Noord",
+      "Zwartberg": "genk_bedrijventerreinen/Zwartberg",
+      "Thor Park / Waterschei": "genk_bedrijventerreinen/Thor",
+      "C-mine / Winterslag": "genk_bedrijventerreinen/CMine"
     }
   }
 }
