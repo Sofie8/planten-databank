@@ -22,7 +22,8 @@ const STATE = {
   loaded: { typologies: new Map(), layers: new Map() },
   options: {
     bobo: { groups: [], codesByGroup: new Map() },
-    region: { districts: [] }
+    region: { districts: [] },
+    genk: { zones: [] }
   },
   selected: {
     typology: null,
@@ -31,8 +32,9 @@ const STATE = {
     soilMoisture: "ALLE",
     acidity: "ALLE",
     spread: "ALLE",
-    globalSearch: "",
-    layers: { klimaat: false, amber: false, regionaal: false, bobo: false, fyto: false },
+    layers: { genk: false, klimaat: false, amber: false, regionaal: false, bobo: false, fyto: false },
+    genkZone: "",
+    genkMode: "paint",
     district: "",
     regionMode: "paint",
     boboGroup: "",
@@ -157,7 +159,23 @@ function districtToFilename(d) {
   return cleaned.split(" ").join("_") + ".xlsx";
 }
 
+
+function genkZoneToFile(zone) {
+  const map = STATE.config?.layers?.genk_bedrijventerreinen || {
+    "Genk-Zuid": "genk_bedrijventerreinen/Genk-Zuid",
+    "Genk-Noord": "genk_bedrijventerreinen/Genk-Noord",
+    "Zwartberg": "genk_bedrijventerreinen/Zwartberg",
+    "Thor Park / Waterschei": "genk_bedrijventerreinen/Thor",
+    "C-mine / Winterslag": "genk_bedrijventerreinen/CMine"
+  };
+  return map[zone] || "";
+}
+
 function layerFiles(layerKey, typology) {
+  if (layerKey === "genk") {
+    const ref = genkZoneToFile(STATE.selected.genkZone);
+    return ref ? [layerFileToPath(ref)] : [];
+  }
   if (layerKey === "regionaal") {
     if (!STATE.selected.district) return [];
     return [layerFileToPath(`regionale_soortenlijst/${districtToFilename(STATE.selected.district).replace(/\.xlsx$/i, "")}`)];
@@ -165,8 +183,8 @@ function layerFiles(layerKey, typology) {
   if (layerKey === "bobo") {
     // BOBO files are per bodemcode, e.g. data/layers/bobo_regio/BOBO_zdg.xlsx
     const code = (STATE.selected.boboCode || "").trim();
-    if (!code || code === "ALLE") return [];
-    return [layerFileToPath(`bobo_regio/BOBO_${code}`)];
+    if (!code || code.toUpperCase() === "ALLE") return [];
+    return [layerFileToPath(`bobo_regio/BOBO_${code.toLowerCase()}`)];
   }
   if (layerKey === "fyto") {
     const names = (STATE.config?.layers?.fytoremediatie?.[typology] ?? []).map(norm).filter(Boolean);
@@ -233,7 +251,7 @@ function plantFromRow(row) {
     traits,
     dynamic,
     fotoIds,
-    layers: { klimaat: false, amber: false, regionaal: false, bobo: false, fyto: false },
+    layers: { genk: false, klimaat: false, amber: false, regionaal: false, bobo: false, fyto: false },
     boboCode: null,
     fytoRow: null,
     raw: row,
@@ -410,21 +428,21 @@ function matchesRegionMode(p) {
   return p.layers.regionaal === true;
 }
 
-function matchesGlobalSearch(p) {
-  const q = (STATE.selected.globalSearch || "").trim().toLowerCase();
-  if (!q) return true;
-  const blob = `${p.latin} ${p.dutch || ""} ${Object.values(p.raw || {}).map(v => norm(v)).join(" ")}`.toLowerCase();
-  return blob.includes(q);
+function matchesGenkMode(p) {
+  if (!STATE.selected.layers.genk) return true;
+  if (STATE.selected.genkMode !== "filter") return true;
+  return p.layers.genk === true;
 }
 
 function matchesAll(p) {
-  return matchesBaseFilters(p) && matchesFacets(p) && matchesRegionMode(p) && matchesGlobalSearch(p);
+  return matchesBaseFilters(p) && matchesFacets(p) && matchesRegionMode(p) && matchesGenkMode(p);
 }
 
 // ── Layers ───────────────────────────────────────────────────────────────────
 
 function badgesForPlant(p) {
   const b = [];
+  if (p.layers.genk) b.push("Genk");
   if (p.layers.klimaat) b.push("Klimaat");
   if (p.layers.amber) b.push("AMBER");
   if (p.layers.regionaal) b.push("Regionaal");
@@ -475,12 +493,23 @@ function clearExtraColumns() {
 
 async function applyLayers() {
   for (const p of STATE.plants) {
-    p.layers = { klimaat: false, amber: false, regionaal: false, bobo: false, fyto: false };
+    p.layers = { genk: false, klimaat: false, amber: false, regionaal: false, bobo: false, fyto: false };
     p.fytoRow = null;
     p.boboCode = null;
+    p.genkZone = null;
   }
   clearExtraColumns();
   const typ = STATE.selected.typology;
+
+  if (STATE.selected.layers.genk) {
+    const idx = await loadLayerIndex(layerFiles("genk", typ));
+    for (const p of STATE.plants) {
+      if (matchLayerRow(idx, p)) {
+        p.layers.genk = true;
+        p.genkZone = STATE.selected.genkZone || null;
+      }
+    }
+  }
 
   if (STATE.selected.layers.klimaat) {
     const idx = await loadLayerIndex(layerFiles("klimaat", typ));
@@ -499,7 +528,7 @@ async function applyLayers() {
 
   if (STATE.selected.layers.bobo) {
     const code = (STATE.selected.boboCode || "").trim();
-    if (code && code !== "ALLE") {
+    if (code && code.toUpperCase() !== "ALLE") {
       const idx = await loadLayerIndex(layerFiles("bobo", typ));
       for (const p of STATE.plants) {
         const row = matchLayerRow(idx, p);
@@ -595,6 +624,12 @@ function render(plants) {
       s.textContent = t;
       wrap.appendChild(s);
     }
+    if (p.layers.genk && p.genkZone) {
+      const s = document.createElement("span");
+      s.className = "badge green";
+      s.textContent = p.genkZone;
+      wrap.appendChild(s);
+    }
     if (p.layers.bobo && p.boboCode) {
       const s = document.createElement("span");
       s.className = "badge";
@@ -652,82 +687,12 @@ async function resolveFotoUrls(fotoIds, max = 80) {
   return out;
 }
 
-
-// ── Detail helpers (Ecoflora + Fyto) ─────────────────────────────────────────
-
-function fytoBaseNameForTypology(typology) {
-  // config.layers.fytoremediatie is an object keyed by typology
-  const arr = STATE.config?.layers?.fytoremediatie?.[typology] || [];
-  const first = Array.isArray(arr) ? (arr[0] || "") : "";
-  const ref = norm(first);
-  return (ref.split("/").pop() || "Fytoremediatie");
-}
-
-function buildFytoDetailPath(typology) {
-  const base = fytoBaseNameForTypology(typology);
-  const med = (STATE.selected.fytoMedium || "bodemwater").toString();
-  const pol = (STATE.selected.fytoPollutant || "PFAS").toString();
-  return `data/layers/fytoremediatie/detail/${base}_${med}_${pol}_detail.xlsx`;
-}
-
-function stringifyRow(row) {
-  return Object.values(row).map(v => norm(v)).join(" ").toLowerCase();
-}
-
-function rowsToCsv(rows) {
-  if (!rows || !rows.length) return "";
-  const headers = Object.keys(rows[0]);
-  const esc = (v) => `"${String(v ?? "").replaceAll('"', '""')}"`;
-  return [
-    headers.map(esc).join(","),
-    ...rows.map(r => headers.map(h => esc(r[h])).join(",")),
-  ].join("\n");
-}
-
-async function loadFytoDetailRowsForPlant(plant) {
-  const path = buildFytoDetailPath(STATE.selected.typology);
-  const cacheKey = path;
-  if (!STATE.loaded.fytoDetail) STATE.loaded.fytoDetail = new Map();
-  let all = STATE.loaded.fytoDetail.get(cacheKey);
-  if (!all) {
-    const wb = await fetchXlsx(path);
-    const sheet = firstSheetName(wb);
-    all = sheetToJson(wb, sheet);
-    STATE.loaded.fytoDetail.set(cacheKey, all);
-  }
-  const latin = keyLatin(plant.latin);
-  const dutch = keyLatin(plant.dutch || "");
-  return all.filter(r => {
-    const rLat = keyLatin(rowLatin(r));
-    const rDu = keyLatin(rowDutch(r));
-    return (rLat && rLat === latin) || (rDu && rDu === dutch);
-  });
-}
-
-function renderEcofloraTable(plant) {
-  const wrap = $("#ecoTableWrap");
-  const tbody = $("#ecoTable tbody");
-  if (!wrap || !tbody) return;
-  tbody.innerHTML = "";
-  const entries = Object.entries(plant.raw || {})
-    .filter(([k,v]) => norm(k) && norm(v))
-    .sort((a,b) => a[0].localeCompare(b[0]));
-  for (const [k,v] of entries) {
-    const tr = document.createElement("tr");
-    const tdK = document.createElement("td"); tdK.textContent = norm(k);
-    const tdV = document.createElement("td"); tdV.textContent = norm(v);
-    tr.appendChild(tdK); tr.appendChild(tdV);
-    tbody.appendChild(tr);
-  }
-}
-
 // ── Drawer ───────────────────────────────────────────────────────────────────
 
 function openDrawer(plant) {
   const drawer = $("#detailDrawer");
   if (!drawer) return;
 
-  // Header fields
   $("#drawerTitle").textContent = plant.latin;
   $("#drawerSub").textContent = plant.dutch || "";
   $("#drawerSoil").textContent = (plant.traits.bodemtype || []).join(", ") || "—";
@@ -735,18 +700,6 @@ function openDrawer(plant) {
   $("#drawerPh").textContent = (plant.traits.zuur || []).join(", ") || "—";
   $("#drawerSpread").textContent = (plant.traits.verspreiding || []).join(", ") || "—";
 
-  // Ecoflora details (all columns)
-  renderEcofloraTable(plant);
-  const ecoWrap = $("#ecoTableWrap");
-  const ecoBtn = $("#ecoToggleBtn");
-  if (ecoWrap) ecoWrap.style.display = "none";
-  if (ecoBtn && ecoWrap) {
-    ecoBtn.onclick = () => {
-      ecoWrap.style.display = (ecoWrap.style.display === "none") ? "block" : "none";
-    };
-  }
-
-  // Fyto summary
   const fytoBox = $("#drawerFyto");
   if (STATE.selected.layers.fyto && plant.fytoRow) {
     fytoBox.style.display = "block";
@@ -757,129 +710,6 @@ function openDrawer(plant) {
     fytoBox.style.display = "none";
   }
 
-  // Fyto detail panel reset
-  const detailBox = $("#fytoDetailBox");
-  const detailMeta = $("#fytoDetailMeta");
-  const detailSearch = $("#fytoDetailSearch");
-  const dtHead = $("#fytoDetailTable thead");
-  const dtBody = $("#fytoDetailTable tbody");
-  if (detailBox) detailBox.style.display = "none";
-  if (detailMeta) detailMeta.textContent = "";
-  if (detailSearch) detailSearch.value = "";
-  if (dtHead) dtHead.innerHTML = "";
-  if (dtBody) dtBody.innerHTML = "";
-
-  async function renderFytoDetail() {
-    if (!detailBox || !dtHead || !dtBody) return {all: [], filtered: []};
-    const allRows = await loadFytoDetailRowsForPlant(plant);
-    const q = (detailSearch?.value || "").trim().toLowerCase();
-    const filtered = q ? allRows.filter(r => stringifyRow(r).includes(q)) : allRows;
-
-    if (detailMeta) {
-      detailMeta.textContent = `${filtered.length} / ${allRows.length} studies (${buildFytoDetailPath(STATE.selected.typology).split("/").pop()})`;
-    }
-
-    dtHead.innerHTML = "";
-    dtBody.innerHTML = "";
-    if (!filtered.length) {
-      dtBody.innerHTML = `<tr><td style="padding:10px">Geen detailrecords gevonden.</td></tr>`;
-      return {all: allRows, filtered};
-    }
-
-    // Gebruik de unie van alle kolommen, zodat ook variabele studierijen volledig zichtbaar zijn.
-    const headers = Array.from(new Set(filtered.flatMap(r => Object.keys(r))));
-    const headerRow = document.createElement("tr");
-    for (const h of headers) {
-      const th = document.createElement("th");
-      th.textContent = h;
-      th.scope = "col";
-      headerRow.appendChild(th);
-    }
-    dtHead.appendChild(headerRow);
-
-    const fragment = document.createDocumentFragment();
-    for (const r of filtered) {
-      const tr = document.createElement("tr");
-      tr.className = "fytoStudyRow";
-
-      for (const h of headers) {
-        const td = document.createElement("td");
-        const value = norm(r[h]);
-        td.textContent = value || "—";
-        td.dataset.column = h;
-        tr.appendChild(td);
-      }
-      fragment.appendChild(tr);
-    }
-    dtBody.appendChild(fragment);
-
-    // Zorg dat de browser de rij meteen zichtbaar rendert.
-    const table = $("#fytoDetailTable");
-    if (table) {
-      table.style.display = "table";
-      table.style.visibility = "visible";
-    }
-    dtBody.style.display = "table-row-group";
-    dtBody.style.visibility = "visible";
-
-    return {all: allRows, filtered};
-  }
-
-  const moreBtn = $("#fytoMoreBtn");
-  if (moreBtn) {
-    moreBtn.onclick = async () => {
-      if (!detailBox) return;
-      const willOpen = (detailBox.style.display === "none");
-      detailBox.style.display = willOpen ? "block" : "none";
-      if (willOpen) {
-        try { await renderFytoDetail(); }
-        catch (e) { if (detailMeta) detailMeta.textContent = "Detailbestand niet gevonden of niet leesbaar."; }
-      }
-    };
-  }
-
-  if (detailSearch) {
-    detailSearch.oninput = async () => {
-      if (detailBox && detailBox.style.display !== "none") {
-        try { await renderFytoDetail(); } catch {}
-      }
-    };
-  }
-
-  const detailCsvBtn = $("#fytoDetailCsvBtn");
-  if (detailCsvBtn) {
-    detailCsvBtn.onclick = async () => {
-      try {
-        const {filtered} = await renderFytoDetail();
-        downloadText(`fyto_detail_${plant.latin}.csv`, rowsToCsv(filtered));
-      } catch {
-        if (detailMeta) detailMeta.textContent = "Kan detail CSV niet exporteren.";
-      }
-    };
-  }
-
-  const extBtn = $("#fytoExtendedCsvBtn");
-  if (extBtn) {
-    extBtn.onclick = async () => {
-      try {
-        const {all} = await renderFytoDetail();
-        const summary = Object.assign({}, plant.raw || {});
-        summary["Latijnse naam"] = plant.latin;
-        summary["Nederlandse naam"] = plant.dutch || "";
-        summary["FYTO_pollutant"] = STATE.selected.fytoPollutant || "";
-        summary["FYTO_medium"] = STATE.selected.fytoMedium || "";
-        summary["FYTO_comments"] = $("#fytoComments")?.textContent || "";
-        summary["FYTO_site"] = $("#fytoSite")?.textContent || "";
-        summary["FYTO_reference"] = $("#fytoRef")?.textContent || "";
-        const combo = rowsToCsv([summary]) + "\n\nFYTO_DETAIL\n" + rowsToCsv(all);
-        downloadText(`extended_${plant.latin}.csv`, combo);
-      } catch {
-        if (detailMeta) detailMeta.textContent = "Kan extended CSV niet exporteren.";
-      }
-    };
-  }
-
-  // Photos carousel
   const imgHost = $("#drawerImages");
   imgHost.innerHTML = `<div class="hint">Foto's laden…</div>`;
   const ids = plant.fotoIds || [];
@@ -937,7 +767,7 @@ function toCsv(rows) {
   const esc = (v) => `"${String(v ?? "").replaceAll('"', '""')}"`;
   const headers = [
     "Latijnse naam", "Nederlandse naam", "Bodemtype", "Vocht", "pH",
-    "Verspreiding", "Lagen",
+    "Verspreiding", "Lagen", "Genkse bedrijfszone",
     ...STATE.table.extraCols.map(c => c.label),
   ];
   return [
@@ -952,6 +782,7 @@ function toCsv(rows) {
         (p.traits.zuur || []).join("|"),
         (p.traits.verspreiding || []).join("|"),
         layers,
+        p.genkZone || "",
       ];
       const extras = STATE.table.extraCols.map(c => c.getter(p) ?? "");
       return [...base, ...extras].map(esc).join(",");
@@ -1045,6 +876,22 @@ function renderExtraFilters(plants) {
 }
 
 // ── Options loaders ──────────────────────────────────────────────────────────
+
+
+async function loadGenkOptions() {
+  const fallback = ["Genk-Zuid", "Genk-Noord", "Zwartberg", "Thor Park / Waterschei", "C-mine / Winterslag"];
+  try {
+    const wb = await fetchXlsx("data/layers/genk_bedrijventerreinen/List_options_Genk.xlsx");
+    const rows = sheetToJson(wb, firstSheetName(wb));
+    const zones = rows
+      .map(r => norm(r["Zone"] || r["zone"] || r["Bedrijventerreinen"] || r["bedrijventerreinen"]))
+      .filter(Boolean);
+    STATE.options.genk.zones = zones.length ? uniqSorted(zones) : fallback;
+  } catch (e) {
+    console.warn("Genkse bedrijfszones niet geladen:", e);
+    STATE.options.genk.zones = fallback;
+  }
+}
 
 async function loadBoboOptions() {
   try {
@@ -1150,10 +997,43 @@ function wire() {
     render(STATE.plants);
   });
 
-  $("#globalSearch")?.addEventListener("input", (e) => {
-    STATE.selected.globalSearch = e.target.value || "";
-    render(STATE.plants);
-  });
+
+  const genkLayer = $("#layer_genk");
+  if (genkLayer) {
+    genkLayer.addEventListener("change", async (e) => {
+      STATE.selected.layers.genk = e.target.checked;
+      const wrap = $("#genkZoneWrap");
+      if (wrap) wrap.style.display = e.target.checked ? "block" : "none";
+      await applyLayers();
+      render(STATE.plants);
+    });
+  }
+
+  const genkZone = $("#genkZone");
+  if (genkZone) {
+    genkZone.addEventListener("change", async (e) => {
+      STATE.selected.genkZone = e.target.value;
+      await applyLayers();
+      render(STATE.plants);
+    });
+  }
+
+  const genkPaint = $("#genkModePaint");
+  const genkFilter = $("#genkModeFilter");
+  if (genkPaint && genkFilter) {
+    genkPaint.addEventListener("change", () => {
+      if (genkPaint.checked) {
+        STATE.selected.genkMode = "paint";
+        render(STATE.plants);
+      }
+    });
+    genkFilter.addEventListener("change", () => {
+      if (genkFilter.checked) {
+        STATE.selected.genkMode = "filter";
+        render(STATE.plants);
+      }
+    });
+  }
 
   $("#layer_klimaat").addEventListener("change", async (e) => {
     STATE.selected.layers.klimaat = e.target.checked;
@@ -1263,6 +1143,7 @@ function wire() {
 
 async function init() {
   await loadConfig();
+  await loadGenkOptions();
   await loadBoboOptions();
   await loadRegionOptions();
 
@@ -1291,6 +1172,24 @@ async function init() {
   }
   STATE.selected.subtype = subs[0];
   subSel.value = STATE.selected.subtype;
+
+
+  // Genkse bedrijfszone dropdown
+  const genkSel = $("#genkZone");
+  if (genkSel) {
+    genkSel.innerHTML = "";
+    const optZ = document.createElement("option");
+    optZ.value = "";
+    optZ.textContent = "Kies zone…";
+    genkSel.appendChild(optZ);
+    for (const z of STATE.options.genk.zones) {
+      const opt = document.createElement("option");
+      opt.value = z;
+      opt.textContent = z;
+      genkSel.appendChild(opt);
+    }
+  }
+  STATE.selected.genkZone = "";
 
   // district dropdown
   const districtSel = $("#district");
