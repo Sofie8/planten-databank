@@ -662,3 +662,12 @@ tbody tr td:first-child {
 /* Meerdere exportmogelijkheden naast elkaar */
 .exportActions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 @media (max-width: 760px) { .exportActions { width: 100%; } }
+
+/* Uitgebreide fytoremediatie studies */
+#fytoDetailRecords { margin-top: 18px; }
+#fytoDetailRecords h3 { color: #166a91; font-size: 1rem; margin: 0 0 12px; }
+.fytoStudy { border: 1px solid #cfe6e5; border-radius: 14px; background: #fff; margin: 10px 0; padding: 12px 14px; }
+.fytoStudy > summary { cursor: pointer; color: #166a91; font-weight: 700; }
+.fytoStudyField { padding: 9px 0; border-bottom: 1px solid #edf2f3; overflow-wrap: anywhere; }
+.fytoStudyField strong { display: block; color: #326b79; font-size: .82rem; margin-bottom: 2px; }
+.fytoStudyField > div { white-space: pre-wrap; }
