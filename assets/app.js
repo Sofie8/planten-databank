@@ -44,6 +44,7 @@ const STATE = {
     fytoMedium: "bodemwater",
   },
   table: { extraCols: [] },
+  fytoDetailRows: [],
 };
 
 // ── Utility functions ────────────────────────────────────────────────────────
@@ -65,6 +66,10 @@ function cleanKey(s) {
 
 function keyLatin(s) { return cleanKey(s); }
 function keyDutch(s) { return "nl:" + cleanKey(s); }
+function latinBinomialKey(s) {
+  const words = norm(s).toLowerCase().replace(/[.,()]/g, " ").split(/\s+/).filter(Boolean);
+  return words.slice(0, 2).join(" ");
+}
 
 // Extra robuuste match voor Latijnse namen:
 // "Betula pendula Roth", "Betula pendula var. ..." en "Betula pendula" worden hetzelfde.
@@ -294,6 +299,7 @@ function plantFromRow(row) {
     layers: { genk: false, klimaat: false, amber: false, regionaal: false, bobo: false, fyto: false },
     boboCode: null,
     fytoRow: null,
+    fytoDetails: [],
     raw: row,
   };
 }
@@ -557,10 +563,12 @@ async function applyLayers() {
   for (const p of STATE.plants) {
     p.layers = { genk: false, klimaat: false, amber: false, regionaal: false, bobo: false, fyto: false };
     p.fytoRow = null;
+    p.fytoDetails = [];
     p.boboCode = null;
     p.genkZone = null;
   }
   clearExtraColumns();
+  STATE.fytoDetailRows = [];
   const typ = STATE.selected.typology;
 
   if (STATE.selected.layers.genk) {
@@ -625,6 +633,44 @@ async function applyLayers() {
       p.fytoRow = row;
     }
     buildFytoColumns();
+
+    // Apart detailbestand: bevat de wetenschappelijke meetresultaten (meerdere studies per plant).
+    // Lees dit rechtstreeks uit data/layers/fytoremediatie/detail/.
+    const typologyName = ({
+      "1.Bomen":"bomen", "2.Haagplanten":"haagplanten", "3.wadi":"wadi",
+      "4.bloemenweide":"bloemenweide", "5.inheemse_planten":"inheemse_planten",
+      "6.gevelgroen":"gevelgroen", "7.grasland_weide":"weide",
+      "9.fruit_groenten_kruiden":"fruit_groenten_kruiden"
+    })[typ];
+    if (typologyName) {
+      const detailPath = `data/layers/fytoremediatie/detail/Fytoremediatie_${typologyName}_${STATE.selected.fytoMedium}_${STATE.selected.fytoPollutant}_detail.xlsx`;
+      try {
+        const wb = await fetchXlsx(detailPath);
+        const detailRows = sheetToJson(wb, firstSheetName(wb));
+        STATE.fytoDetailRows = detailRows;
+        const detailMap = new Map();
+        for (const r of detailRows) {
+          const latin = rowLatin(r), dutch = rowDutch(r);
+          // Primair volledige soortnaam, daarna genus+soort als naam auteurs bevat.
+          for (const key of [latin && keyLatin(latin), latin && latinBinomialKey(latin), dutch && keyDutch(dutch)].filter(Boolean)) {
+            if (!detailMap.has(key)) detailMap.set(key, []);
+            if (!detailMap.get(key).includes(r)) detailMap.get(key).push(r);
+          }
+        }
+        for (const plant of STATE.plants) {
+          const matches = [keyLatin(plant.latin), latinBinomialKey(plant.latin), plant.dutch && keyDutch(plant.dutch)]
+            .filter(Boolean).flatMap(key => detailMap.get(key) || []);
+          plant.fytoDetails = [...new Set(matches)];
+          if (plant.fytoDetails.length) plant.layers.fyto = true;
+        }
+      } catch (err) {
+        if (err.message && err.message.includes("404")) {
+          console.info("Geen detailbestand beschikbaar voor deze combinatie:", detailPath);
+        } else {
+          console.warn("Fytoremediatie detailbestand kon niet worden gelezen:", detailPath, err);
+        }
+      }
+    }
   }
 }
 
@@ -775,6 +821,33 @@ function openDrawer(plant) {
     fytoBox.style.display = "none";
   }
 
+  const detailHost = $("#fytoDetailRecords");
+  if (detailHost) {
+    detailHost.replaceChildren();
+    if (STATE.selected.layers.fyto && plant.fytoDetails?.length) {
+      fytoBox.style.display = "block";
+      const heading = document.createElement("h3");
+      heading.textContent = `Onderzoeksgegevens (${plant.fytoDetails.length} studies)`;
+      detailHost.appendChild(heading);
+      plant.fytoDetails.forEach((study, i) => {
+        const studyPanel = document.createElement("details");
+        studyPanel.className = "fytoStudy";
+        if (i === 0) studyPanel.open = true;
+        const summary = document.createElement("summary");
+        summary.textContent = `Studie ${i + 1} · ${study.Reference || study["Reference (author, year, doi)"] || "Onderzoeksgegevens"}`;
+        studyPanel.appendChild(summary);
+        for (const [label, value] of Object.entries(study)) {
+          if (value === null || value === undefined || String(value).trim() === "") continue;
+          const field = document.createElement("div"); field.className = "fytoStudyField";
+          const k = document.createElement("strong"); k.textContent = label;
+          const v = document.createElement("div"); v.textContent = String(value);
+          field.append(k, v); studyPanel.appendChild(field);
+        }
+        detailHost.appendChild(studyPanel);
+      });
+    }
+  }
+
   const imgHost = $("#drawerImages");
   imgHost.innerHTML = `<div class="hint">Foto's laden…</div>`;
   const ids = plant.fotoIds || [];
@@ -867,56 +940,43 @@ function downloadText(filename, text) {
   setTimeout(() => URL.revokeObjectURL(url), 250);
 }
 
-// ── Uitgebreide export: behoud alle velden uit de gekoppelde fytodata ──────────
-function toExtendedCsv(plants) {
-  const columns = [
-    "Latijnse naam", "Nederlandse naam", "Bodemtype", "Bodemvochtigheid",
-    "Zuurtegraad (pH)", "Verspreiding", "Lagen", "Genkse bedrijfszone"
-  ];
-  // Maak een volledige unie van de originele fytoremediatiekolommen; er zijn
-  // verschillende kolommen mogelijk per plant of gegevensbron.
-  const fytoKeys = Array.from(new Set(plants.flatMap(p =>
-    p.fytoRow ? Object.keys(p.fytoRow) : []
-  )));
-  const baseSet = new Set(columns);
-  const rawKeys = fytoKeys.filter(k => !baseSet.has(k));
-  const header = [...columns, ...rawKeys];
-  const csvField = v => '"' + String(v ?? "").replaceAll('"', '""') + '"';
-  const records = plants.map(p => {
-    const initial = [
-      p.latin, p.dutch,
-      (p.traits.bodemtype || []).join("|"),
-      (p.traits.bodemvocht || []).join("|"),
-      (p.traits.zuur || []).join("|"),
-      (p.traits.verspreiding || []).join("|"),
-      badgesForPlant(p).join("|"), p.genkZone || ""
-    ];
-    return [...initial, ...rawKeys.map(key => p.fytoRow?.[key] ?? "")];
-  });
-  // BOM + puntkomma: direct bruikbaar in Nederlandstalige Excel-installaties.
-  return "\uFEFF" + [header, ...records]
-    .map(row => row.map(csvField).join(";"))
-    .join("\r\n");
-}
-
-function exportExtendedCsv() {
-  const filtered = STATE.plants.filter(matchesAll);
-  if (!filtered.length) {
-    alert("Er zijn geen planten in je huidige selectie om te exporteren.");
-    return;
+// Uitgebreide export: één CSV-rij per studie en plant; behoud ALLE Excel-kolommen.
+function exportFytoExtended() {
+  try {
+    if (!STATE.selected.layers.fyto) {
+      alert("Vink eerst Fytoremediatie aan om de uitgebreide onderzoeksgegevens te exporteren.");
+      return;
+    }
+    const plants = STATE.plants.filter(matchesAll);
+    if (!plants.length) { alert("Geen planten gevonden voor deze filters."); return; }
+    const entries = plants.flatMap(p => (p.fytoDetails?.length ? p.fytoDetails : [null]).map(d => ({p,d})));
+    // Neem ook studies op die niet één-op-één met de soortenlijst matchen.
+    // Bijvoorbeeld groepsnamen of namen met een andere botanische auteursvermelding.
+    const matched = new Set(entries.map(x => x.d).filter(Boolean));
+    for (const d of STATE.fytoDetailRows) {
+      if (!matched.has(d)) entries.push({p:null,d});
+    }
+    const detailHeaders = [...new Set(entries.flatMap(x => Object.keys(x.d || {})))];
+    const headers = ["Latijnse naam", "Nederlandse naam", "Bodemtype", "Vocht", "pH", "Verspreiding", "Lagen", ...detailHeaders];
+    const csvCell = value => `"${String(value ?? "").replaceAll('"', '""')}"`;
+    const lines = [headers.map(csvCell).join(";")];
+    for (const {p,d} of entries) {
+      const base = p ? [p.latin,p.dutch,p.traits.bodemtype.join("|"),p.traits.bodemvocht.join("|"),
+        p.traits.zuur.join("|"),p.traits.verspreiding.join("|"),badgesForPlant(p).join("|")] :
+        [rowLatin(d),rowDutch(d),"","","","","Fyto detailstudie"];
+      lines.push([...base, ...detailHeaders.map(k => d?.[k] ?? "")].map(csvCell).join(";"));
+    }
+    const count = entries.filter(x => x.d).length;
+    if (!count) {
+      const proceed = confirm("Er zijn geen gekoppelde detailstudies voor deze plantenselectie. Toch de basisgegevens exporteren?");
+      if (!proceed) return;
+    }
+    const filename = `planten_fytoremediatie_${STATE.selected.typology}_${STATE.selected.fytoMedium}_${STATE.selected.fytoPollutant}_uitgebreid.csv`.replace(/[\/]/g,"_");
+    downloadText(filename, "\uFEFF" + lines.join("\r\n"));
+  } catch(err) {
+    console.error("Uitgebreide export mislukt:", err);
+    alert("Uitgebreide export mislukt: " + err.message);
   }
-  if (!STATE.selected.layers.fyto) {
-    alert("Vink eerst Fytoremediatie aan om de uitgebreide fytogegevens te exporteren.");
-    return;
-  }
-  const matches = filtered.filter(p => p.fytoRow);
-  if (!matches.length) {
-    alert("Geen fytoremediatiegegevens gevonden voor de huidige selectie. Pas de filters aan.");
-    return;
-  }
-  const safeName = s => String(s ?? "").replace(/[^a-z0-9_-]+/gi, "_");
-  const filename = `planten_fyto_uitgebreid_${safeName(STATE.selected.typology)}_${safeName(STATE.selected.fytoPollutant)}_${safeName(STATE.selected.fytoMedium)}.csv`;
-  downloadText(filename, toExtendedCsv(filtered));
 }
 
 // ── Extra filters UI ─────────────────────────────────────────────────────────
@@ -1249,22 +1309,13 @@ function wire() {
     });
   }
 
+  $("#exportCsvExtended")?.addEventListener("click", exportFytoExtended);
+
   $("#exportCsv").addEventListener("click", () => {
     const filtered = STATE.plants.filter(matchesAll);
     const filename = `planten_${STATE.selected.typology}_${STATE.selected.subtype}.csv`;
     downloadText(filename, toCsv(filtered));
   });
-
-  const extendedExportButton = $("#exportCsvExtended");
-  if (extendedExportButton) {
-    extendedExportButton.addEventListener("click", () => {
-      try { exportExtendedCsv(); }
-      catch (error) {
-        console.error("Uitgebreide CSV-export mislukt:", error);
-        alert("De uitgebreide export is mislukt: " + (error?.message || String(error)));
-      }
-    });
-  }
 }
 
 // ── Init ─────────────────────────────────────────────────────────────────────
