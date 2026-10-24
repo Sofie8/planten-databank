@@ -867,6 +867,58 @@ function downloadText(filename, text) {
   setTimeout(() => URL.revokeObjectURL(url), 250);
 }
 
+// ── Uitgebreide export: behoud alle velden uit de gekoppelde fytodata ──────────
+function toExtendedCsv(plants) {
+  const columns = [
+    "Latijnse naam", "Nederlandse naam", "Bodemtype", "Bodemvochtigheid",
+    "Zuurtegraad (pH)", "Verspreiding", "Lagen", "Genkse bedrijfszone"
+  ];
+  // Maak een volledige unie van de originele fytoremediatiekolommen; er zijn
+  // verschillende kolommen mogelijk per plant of gegevensbron.
+  const fytoKeys = Array.from(new Set(plants.flatMap(p =>
+    p.fytoRow ? Object.keys(p.fytoRow) : []
+  )));
+  const baseSet = new Set(columns);
+  const rawKeys = fytoKeys.filter(k => !baseSet.has(k));
+  const header = [...columns, ...rawKeys];
+  const csvField = v => '"' + String(v ?? "").replaceAll('"', '""') + '"';
+  const records = plants.map(p => {
+    const initial = [
+      p.latin, p.dutch,
+      (p.traits.bodemtype || []).join("|"),
+      (p.traits.bodemvocht || []).join("|"),
+      (p.traits.zuur || []).join("|"),
+      (p.traits.verspreiding || []).join("|"),
+      badgesForPlant(p).join("|"), p.genkZone || ""
+    ];
+    return [...initial, ...rawKeys.map(key => p.fytoRow?.[key] ?? "")];
+  });
+  // BOM + puntkomma: direct bruikbaar in Nederlandstalige Excel-installaties.
+  return "\uFEFF" + [header, ...records]
+    .map(row => row.map(csvField).join(";"))
+    .join("\r\n");
+}
+
+function exportExtendedCsv() {
+  const filtered = STATE.plants.filter(matchesAll);
+  if (!filtered.length) {
+    alert("Er zijn geen planten in je huidige selectie om te exporteren.");
+    return;
+  }
+  if (!STATE.selected.layers.fyto) {
+    alert("Vink eerst Fytoremediatie aan om de uitgebreide fytogegevens te exporteren.");
+    return;
+  }
+  const matches = filtered.filter(p => p.fytoRow);
+  if (!matches.length) {
+    alert("Geen fytoremediatiegegevens gevonden voor de huidige selectie. Pas de filters aan.");
+    return;
+  }
+  const safeName = s => String(s ?? "").replace(/[^a-z0-9_-]+/gi, "_");
+  const filename = `planten_fyto_uitgebreid_${safeName(STATE.selected.typology)}_${safeName(STATE.selected.fytoPollutant)}_${safeName(STATE.selected.fytoMedium)}.csv`;
+  downloadText(filename, toExtendedCsv(filtered));
+}
+
 // ── Extra filters UI ─────────────────────────────────────────────────────────
 
 function toggleFacetPanel(id) {
@@ -1202,6 +1254,17 @@ function wire() {
     const filename = `planten_${STATE.selected.typology}_${STATE.selected.subtype}.csv`;
     downloadText(filename, toCsv(filtered));
   });
+
+  const extendedExportButton = $("#exportCsvExtended");
+  if (extendedExportButton) {
+    extendedExportButton.addEventListener("click", () => {
+      try { exportExtendedCsv(); }
+      catch (error) {
+        console.error("Uitgebreide CSV-export mislukt:", error);
+        alert("De uitgebreide export is mislukt: " + (error?.message || String(error)));
+      }
+    });
+  }
 }
 
 // ── Init ─────────────────────────────────────────────────────────────────────
