@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Eco-GenX Planten Databank</title>
-  <link rel="stylesheet" href="assets/style.css?v=eco1" />
+  <link rel="stylesheet" href="assets/style.css?v=eco2" />
 </head>
 <body>
 
@@ -14,7 +14,7 @@
         <img class="brandLogo" src="assets/eco-genx-logo.png" alt="Eco-GenX logo" />
         <div>
           <div class="title">Planten Databank</div>
-          <div class="subtitle">Eco-GenX · zachte, wetenschappelijke plantselectie voor bedrijventerreinen</div>
+          <div class="subtitle">Eco-GenX · Vind de juiste planten voor jouw locatie, ook voor het zuiveren van bodem en water.</div>
         </div>
       </div>
 
@@ -30,16 +30,16 @@
 
     <section class="hero panel heroPanel">
       <div class="heroText">
-        <span class="eyebrow">Eco-GenX plantenmodule</span>
-        <h1>Selecteer sneller de juiste planten voor jouw site</h1>
+        <span class="eyebrow">Planten Databank · Eco-GenX</span>
+        <h1>Vind de juiste planten voor jouw locatie</h1>
         <p>
-          Zoek op typologie, bodemtype, bodemvocht, pH, verspreiding en extra lagen zoals
-          BOBO, AMBER, regionale lijsten, Genkse bedrijventerreinen en fytoremediatie.
+          Ontdek welke planten passen bij jouw bodem en omgeving, ook als je planten zoekt
+          om bodem of water te helpen zuiveren.
         </p>
         <div class="heroNotes">
-          <span class="heroBadge">groter en rustiger filteroverzicht</span>
-          <span class="heroBadge">zachte blauw-groen huisstijl</span>
-          <span class="heroBadge">Eco-GenX branding</span>
+          <span class="heroBadge">Plantadvies op maat</span>
+          <span class="heroBadge">Bodem &amp; water</span>
+          <span class="heroBadge">Fytoremediatie</span>
         </div>
       </div>
       <div class="heroArt">
@@ -51,7 +51,7 @@
       <div class="sectionHead">
         <div>
           <h2>Basisfilters</h2>
-          <p>Kies hieronder je plantcategorieën. De filters zijn bewust groter en meer onder elkaar gezet voor meer rust.</p>
+          <p>Kies de eigenschappen van je locatie en ontdek welke planten erbij passen.</p>
         </div>
       </div>
 
@@ -92,8 +92,8 @@
       <div class="layers">
         <div class="sectionHead compact">
           <div>
-            <h2>Extra lagen en labels</h2>
-            <p>Behoud van je bestaande categorieën zoals BOBO, AMBER, bedrijventerreinen Genk en fytoremediatie.</p>
+            <h2>Extra filters</h2>
+            <p>Verfijn je selectie met aanvullende soortenlijsten, regionale gegevens en mogelijkheden voor fytoremediatie.</p>
           </div>
         </div>
 
@@ -186,7 +186,10 @@
           <div class="results-title">Plantenselectie</div>
           <div class="resultsMeta" id="resultsMeta">—</div>
         </div>
-        <button class="btn" id="exportCsv">Export CSV</button>
+        <div class="exportActions">
+          <button class="btn ghost" id="exportCsv">CSV export</button>
+          <button class="btn" id="exportCsvExtended" title="Download alle beschikbare fytoremediatiegegevens voor de geselecteerde planten">Uitgebreide CSV export</button>
+        </div>
       </div>
       <div class="tableWrap">
         <table id="results">
@@ -257,6 +260,6 @@
   </aside>
 
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="assets/app.js?v=genk1"></script>
+  <script src="assets/app.js?v=eco2"></script>
 </body>
 </html>
